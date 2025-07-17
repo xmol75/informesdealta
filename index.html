@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Informes de Alta</title>
+    
+    <!-- 1. Carga de Tailwind CSS (para el diseño) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Carga de React y ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- 3. Carga de Babel (para que el navegador entienda JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Pequeño ajuste para la barra de scroll en modo oscuro */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+
+    <div id="root"></div>
+
+    <!-- 4. Nuestro código de React -->
+    <script type="text/babel">
+    
+    const { useState, useEffect, useCallback } = React;
+
+    // --- DATOS DE PLANTILLAS Y CAMPOS ---
+    const commonFields = {
+      diagnosticos: { id: 'diagnosticos', label: 'DIAGNÓSTICOS DEL EPISODIO (incluir CIE-9)', type: 'textarea' },
+      problemasSalud: { id: 'problemasSalud', label: 'PROBLEMAS DE SALUD', type: 'textarea' },
+      procedimientos: { id: 'procedimientos', label: 'PROCEDIMIENTOS EN EL EPISODIO (incluir CIE-9)', type: 'textarea' },
+      grd: { id: 'grd', label: 'GRD', type: 'text' },
+      alergias: { id: 'alergias', label: 'Alergias', type: 'text', defaultValue: 'Sin alergias medicamentosas conocidas.' },
+      habitosToxicos: { id: 'habitosToxicos', label: 'Hábitos tóxicos', type: 'text' },
+      antecedentesPatologicos: { id: 'antecedentesPatologicos', label: 'Antecedentes patológicos', type: 'textarea' },
+      intervencionesPrevias: { id: 'intervencionesPrevias', label: 'Intervenciones quirúrgicas', type: 'textarea' },
+      ingresosPrevios: { id: 'ingresosPrevios', label: 'Ingresos Hospitalarios', type: 'textarea' },
+      tratamientoHabitual: { id: 'tratamientoHabitual', label: 'Sigue tratamiento (según receta electrónica)', type: 'textarea' },
+      analitica: { id: 'analitica', label: 'Analítica', type: 'textarea' },
+      pruebasImagen: { id: 'pruebasImagen', label: 'Pruebas de imagen', type: 'textarea' },
+      anatomiaPatologica: { id: 'anatomiaPatologica', label: 'Anatomía Patológica', type: 'textarea' },
+      fraseFinal: { id: 'fraseFinal', label: 'Frase final', type: 'textarea', defaultValue: 'Durante el resto de la estancia se mantiene sin presentar complicaciones, con tolerancia oral correcta y tránsito intestinal reestablecido, procediendo a alta el día de la fecha.'},
+      citaRevision: { id: 'citaRevision', label: 'Cita para revisión en Consultas Externas', type: 'text', defaultValue: 'Citado por Secretaría de Cirugía.' }
+    };
+
+    const programmedTemplateFields = {
+      enfermedadActual: { id: 'enfermedadActualProgramado', label: 'Enfermedad actual', type: 'textarea' },
+      intervencion: { id: 'intervencion', label: 'Intervención quirúrgica (Dres, fecha)', type: 'text' },
+      evolucion: { id: 'evolucionProgramado', label: 'Evolución', type: 'textarea', defaultValue: 'El postoperatorio inmediato transcurre en ' },
+    };
+
+    const urgentTemplateFields = {
+      exploracionFisica: { id: 'exploracionFisica', label: 'Exploración física (Signos vitales)', type: 'textarea' },
+      enfermedadActual: { id: 'enfermedadActualUrgente', label: 'Enfermedad actual', type: 'textarea' },
+      evolucion: { id: 'evolucionUrgente', label: 'Evolución', type: 'textarea', defaultValue: 'Tras una estancia en el Área de Observación de Urgencias se procede a ingreso en planta de Hospitalización del Servicio de Cirugía en la Unidad [UNIDAD], bajo la orientación diagnóstica de [DIAGNÓSTICO]. Se inicia tratamiento conservador consistente en [TRATAMIENTO].' },
+    };
+
+    // --- COMPONENTES DE LA UI ---
+    const InputField = ({ id, label, value, onChange, type = 'text' }) => (
+      <div className="mb-4">
+        <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
+        <input type={type} id={id} name={id} value={value} onChange={onChange} className="w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+      </div>
+    );
+
+    const TextareaField = ({ id, label, value, onChange, rows = 3 }) => (
+      <div className="mb-4">
+        <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
+        <textarea id={id} name={id} value={value} onChange={onChange} rows={rows} className="w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+      </div>
+    );
+
+    const ReportSection = ({ title, children }) => (
+      <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-md">
+        <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">{title}</h3>
+        {children}
+      </div>
+    );
+
+    const InitialQuestions = ({ data, handleInputChange }) => (
+      <ReportSection title="1. Preguntas Iniciales">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Ingreso</label>
+            <select name="tipoIngreso" value={data.tipoIngreso} onChange={handleInputChange} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="programado">Programado</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">¿Paciente intervenido?</label>
+            <select name="intervenido" value={data.intervenido} onChange={handleInputChange} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+        </div>
+      </ReportSection>
+    );
+
+    const AIAssistant = ({ onAnalysisComplete, isLoading, error }) => {
+        const [aiInputText, setAiInputText] = useState('');
+
+        const handleAnalysis = () => {
+            if (!aiInputText.trim()) {
+                alert('Por favor, pega el texto del informe para analizar.');
+                return;
+            }
+            onAnalysisComplete(aiInputText);
+        };
+
+        return (
+            <ReportSection title="Asistente IA">
+                <div className="p-2 bg-gray-700 rounded-md">
+                    <p className="text-sm text-gray-300 mb-2">Pega aquí el informe de ingreso, hoja quirúrgica o notas de evolución para rellenar los campos automáticamente.</p>
+                    <textarea
+                        value={aiInputText}
+                        onChange={(e) => setAiInputText(e.target.value)}
+                        placeholder="Pegar texto clínico aquí..."
+                        rows={10}
+                        className="w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                    <button
+                        onClick={handleAnalysis}
+                        disabled={isLoading}
+                        className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? 'Analizando con IA...' : 'Analizar y Rellenar Formulario'}
+                    </button>
+                    {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
+                </div>
+            </ReportSection>
+        );
+    };
+
+    // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
+    function App() {
+      const [formData, setFormData] = useState({
+        tipoIngreso: 'programado',
+        intervenido: 'si',
+        fechaIngreso: '',
+        fechaAlta: '',
+        fechaUrgencias: '',
+        edad: '',
+        motivoProgramado: '',
+        motivoUrgente: '',
+        diagnosticos: '',
+        problemasSalud: '',
+        procedimientos: '',
+        grd: '',
+        alergias: commonFields.alergias.defaultValue,
+        habitosToxicos: '',
+        antecedentesPatologicos: '',
+        intervencionesPrevias: '',
+        ingresosPrevios: '',
+        tratamientoHabitual: '',
+        enfermedadActualProgramado: '',
+        enfermedadActualUrgente: '',
+        exploracionFisica: '',
+        analitica: '',
+        pruebasImagen: '',
+        intervencion: '',
+        anatomiaPatologica: '',
+        evolucionProgramado: programmedTemplateFields.evolucion.defaultValue,
+        evolucionUrgente: urgentTemplateFields.evolucion.defaultValue,
+        fraseFinal: commonFields.fraseFinal.defaultValue,
+        citaRevision: commonFields.citaRevision.defaultValue,
+      });
+
+      const [generatedReport, setGeneratedReport] = useState('');
+      const [copySuccess, setCopySuccess] = useState('');
+      const [isAiLoading, setIsAiLoading] = useState(false);
+      const [aiError, setAiError] = useState('');
+
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+      };
+
+      const calculateDuration = useCallback(() => {
+        if (formData.fechaIngreso && formData.fechaAlta) {
+          const start = new Date(formData.fechaIngreso);
+          const end = new Date(formData.fechaAlta);
+          const diffTime = Math.abs(end - start);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          return diffDays === 0 ? '0 días (misma fecha)' : `${diffDays} día(s)`;
+        }
+        return 'N/A';
+      }, [formData.fechaIngreso, formData.fechaAlta]);
+
+      const handleAiAnalysis = async (clinicalText) => {
+        setIsAiLoading(true);
+        setAiError('');
+
+        const prompt = `Eres un asistente médico experto en analizar informes clínicos para generar resúmenes de alta. Analiza el siguiente texto clínico. Extrae la información solicitada y devuélvela estrictamente en formato JSON, siguiendo el esquema proporcionado. Si un campo no se encuentra en el texto, devuelve un string vacío para ese campo. El texto a analizar es:\n\n---INICIO TEXTO---\n${clinicalText}\n---FIN TEXTO---`;
+
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        diagnosticos: { type: "STRING" },
+                        problemasSalud: { type: "STRING" },
+                        procedimientos: { type: "STRING" },
+                        antecedentesPatologicos: { type: "STRING" },
+                        intervencionesPrevias: { type: "STRING" },
+                        tratamientoHabitual: { type: "STRING" },
+                        enfermedadActual: { type: "STRING" },
+                        exploracionFisica: { type: "STRING" },
+                        analitica: { type: "STRING" },
+                        pruebasImagen: { type: "STRING" },
+                        intervencion: { type: "STRING" },
+                        anatomiaPatologica: { type: "STRING" },
+                        evolucion: { type: "STRING" },
+                    },
+                },
+            },
+        };
+
+        try {
+            const apiKey = ""; // Dejar vacío, se gestiona automáticamente
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+                const aiJsonText = result.candidates[0].content.parts[0].text;
+                const aiData = JSON.parse(aiJsonText);
+                
+                const updatedFormData = {};
+                for (const key in aiData) {
+                    if (aiData[key]) {
+                        if (key === 'enfermedadActual') {
+                            if (formData.tipoIngreso === 'programado') {
+                                updatedFormData.enfermedadActualProgramado = aiData[key];
+                            } else {
+                                updatedFormData.enfermedadActualUrgente = aiData[key];
+                            }
+                        } else if (key === 'evolucion') {
+                             if (formData.tipoIngreso === 'programado' && formData.intervenido === 'si') {
+                                updatedFormData.evolucionProgramado = aiData[key];
+                            } else {
+                                updatedFormData.evolucionUrgente = aiData[key];
+                            }
+                        }
+                        else {
+                            updatedFormData[key] = aiData[key];
+                        }
+                    }
+                }
+                
+                setFormData(prev => ({ ...prev, ...updatedFormData }));
+
+            } else {
+                throw new Error("La respuesta de la IA no tuvo el formato esperado.");
+            }
+
+        } catch (error) {
+            console.error("Error al analizar con IA:", error);
+            setAiError(`Error al analizar: ${error.message}. Revisa la consola para más detalles.`);
+        } finally {
+            setIsAiLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        const { tipoIngreso, intervenido, ...data } = formData;
+        
+        const formatDate = (dateString) => {
+            if (!dateString) return '[FECHA NO ESPECIFICADA]';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        };
+
+        let report = `ALTA DEL SERVICIO DE CIRUGÍA GENERAL Y DEL APARATO DIGESTIVO\nUnidad de Cirugía Hepatobiliar y Trasplante Hepático\n\n------------------------------------------------------------\n\n`;
+        report += `DIAGNÓSTICOS DEL EPISODIO:\n${data.diagnosticos || '[No especificado]'}\n\n`;
+        report += `PROBLEMAS DE SALUD:\n${data.problemasSalud || '[No especificado]'}\n\n`;
+        report += `PROCEDIMIENTOS EN EL EPISODIO:\n${data.procedimientos || '[No especificado]'}\n\n`;
+        report += `GRD: ${data.grd || '[No especificado]'}\n\n------------------------------------------------------------\n\n`;
+        report += `Fecha de Ingreso: ${formatDate(data.fechaIngreso)}\nFecha de Alta: ${formatDate(data.fechaAlta)}\nDuración de la estancia: ${calculateDuration()}\n\n`;
+
+        if (tipoIngreso === 'programado') {
+          report += `MOTIVO DE CONSULTA: Paciente de ${data.edad || '[edad]'} años que ingresa de manera programada para intervenirse quirúrgicamente de ${data.motivoProgramado || '[intervención]'}.\n\n`;
+        } else {
+          report += `MOTIVO DE CONSULTA: Paciente de ${data.edad || '[edad]'} años que acude a urgencias el día ${formatDate(data.fechaUrgencias)} por ${data.motivoUrgente || '[motivo]'}.\n\n`;
+        }
+        
+        report += `ANTECEDENTES PERSONALES:\n- Alergias: ${data.alergias}\n- Hábitos tóxicos: ${data.habitosToxicos || 'No refiere'}\n- Antecedentes patológicos: ${data.antecedentesPatologicos || 'No refiere'}\n- Intervenciones quirúrgicas: ${data.intervencionesPrevias || 'No refiere'}\n- Ingresos Hospitalarios: ${data.ingresosPrevios || 'No refiere'}\n- Sigue tratamiento (según receta electrónica): ${data.tratamientoHabitual || 'No refiere'}\n\n`;
+        
+        if (tipoIngreso === 'programado') {
+            report += `ENFERMEDAD ACTUAL: ${data.enfermedadActualProgramado || '[No especificado]'}\n\n`;
+        } else {
+            report += `ENFERMEDAD ACTUAL: ${data.enfermedadActualUrgente || '[No especificado]'}\n\n`;
+            report += `EXPLORACIÓN FÍSICA (al ingreso por Urgencias):\n${data.exploracionFisica || '[No especificado]'}\n\n`;
+        }
+
+        report += `PRUEBAS COMPLEMENTARIAS:\n· Analítica: ${data.analitica || 'Ver historia clínica.'}\n· Pruebas de imagen: ${data.pruebasImagen || 'Ver historia clínica.'}\n\n`;
+
+        if (intervenido === 'si') {
+          report += `INTERVENCIÓN QUIRÚRGICA: ${data.intervencion || '[No especificado]'}\n\n`;
+          report += `ANATOMÍA PATOLÓGICA: ${data.anatomiaPatologica || 'Pendiente de resultado.'}\n\n`;
+        }
+
+        report += `EVOLUCIÓN:\n`;
+        if (tipoIngreso === 'programado' && intervenido === 'si') {
+          report += `${data.evolucionProgramado}\n`;
+        } else {
+          report += `${data.evolucionUrgente}\n`;
+        }
+        report += `${data.fraseFinal}\n\n`;
+
+        report += `RECOMENDACIONES AL ALTA:\n- Dieta sin grasas y tratamientos habituales (si procede).\n- Analgesia: ibuprofeno 600mg/8h vo + paracetamol 1g/8h vo alterno si dolor.\n- Omeprazol 20mg/24h vo 20 minutos antes del desayuno.\n`;
+        if (intervenido === 'si') {
+          report += `- Retirar grapas en el centro de salud a los 9 días de la intervención.\n`;
+        }
+        report += `- Reposo domiciliario e ir reincorporándose gradualmente en la actividad cotidiana.\n- Si empeora, acudir a Urgencias de Cirugía del Hospital Universitario Son Espases.\n- Acudirá a revisión en Consultas Externas de Cirugía (Unidad HByT): ${data.citaRevision}\n`;
+
+        setGeneratedReport(report);
+      }, [formData, calculateDuration]);
+
+      const copyToClipboard = () => {
+        const reportTextArea = document.getElementById('generated-report-textarea');
+        reportTextArea.select();
+        document.execCommand('copy');
+        setCopySuccess('¡Informe copiado!');
+        setTimeout(() => setCopySuccess(''), 2000);
+      };
+
+      return (
+        <div className="bg-gray-900 min-h-screen text-white font-sans p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            
+            <header className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-teal-400">Generador de Informes de Alta</h1>
+              <p className="text-gray-400">Servicio de Cirugía General y del Aparato Digestivo - Unidad de Cirugía Hepatobiliar y Trasplante Hepático</p>
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              <div className="flex flex-col space-y-6">
+                <InitialQuestions data={formData} handleInputChange={handleInputChange} />
+                <AIAssistant onAnalysisComplete={handleAiAnalysis} isLoading={isAiLoading} error={aiError} />
+                <ReportSection title="2. Datos del Episodio">
+                  <TextareaField {...commonFields.diagnosticos} value={formData.diagnosticos} onChange={handleInputChange} />
+                  <TextareaField {...commonFields.problemasSalud} value={formData.problemasSalud} onChange={handleInputChange} />
+                  <TextareaField {...commonFields.procedimientos} value={formData.procedimientos} onChange={handleInputChange} />
+                  <InputField {...commonFields.grd} value={formData.grd} onChange={handleInputChange} />
+                </ReportSection>
+                <ReportSection title="3. Fechas y Motivo">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <InputField label="Fecha Ingreso" id="fechaIngreso" type="date" value={formData.fechaIngreso} onChange={handleInputChange} />
+                        <InputField label="Fecha Alta" id="fechaAlta" type="date" value={formData.fechaAlta} onChange={handleInputChange} />
+                        {formData.tipoIngreso === 'urgente' && (
+                            <InputField label="Fecha Urgencias" id="fechaUrgencias" type="date" value={formData.fechaUrgencias} onChange={handleInputChange} />
+                        )}
+                    </div>
+                     <InputField label="Edad del paciente" id="edad" type="number" value={formData.edad} onChange={handleInputChange} />
+                    {formData.tipoIngreso === 'programado' ? (
+                        <InputField label="Intervención programada" id="motivoProgramado" value={formData.motivoProgramado} onChange={handleInputChange} />
+                    ) : (
+                        <InputField label="Motivo de consulta en urgencias" id="motivoUrgente" value={formData.motivoUrgente} onChange={handleInputChange} />
+                    )}
+                </ReportSection>
+                <ReportSection title="4. Antecedentes Personales">
+                    <InputField {...commonFields.alergias} value={formData.alergias} onChange={handleInputChange} />
+                    <InputField {...commonFields.habitosToxicos} value={formData.habitosToxicos} onChange={handleInputChange} />
+                    <TextareaField {...commonFields.antecedentesPatologicos} value={formData.antecedentesPatologicos} onChange={handleInputChange} />
+                    <TextareaField {...commonFields.intervencionesPrevias} value={formData.intervencionesPrevias} onChange={handleInputChange} />
+                    <TextareaField {...commonFields.ingresosPrevios} value={formData.ingresosPrevios} onChange={handleInputChange} />
+                    <TextareaField {...commonFields.tratamientoHabitual} value={formData.tratamientoHabitual} onChange={handleInputChange} />
+                </ReportSection>
+                <ReportSection title="5. Enfermedad Actual y Pruebas">
+                    {formData.tipoIngreso === 'programado' ? (
+                        <TextareaField {...programmedTemplateFields.enfermedadActual} value={formData.enfermedadActualProgramado} onChange={handleInputChange} name="enfermedadActualProgramado" />
+                    ) : (
+                        <React.Fragment>
+                         <TextareaField {...urgentTemplateFields.enfermedadActual} value={formData.enfermedadActualUrgente} onChange={handleInputChange} name="enfermedadActualUrgente" />
+                         <TextareaField {...urgentTemplateFields.exploracionFisica} value={formData.exploracionFisica} onChange={handleInputChange} />
+                        </React.Fragment>
+                    )}
+                    <TextareaField {...commonFields.analitica} value={formData.analitica} onChange={handleInputChange} />
+                    <TextareaField {...commonFields.pruebasImagen} value={formData.pruebasImagen} onChange={handleInputChange} />
+                </ReportSection>
+                {formData.intervenido === 'si' && (
+                    <ReportSection title="6. Intervención Quirúrgica">
+                        <InputField {...programmedTemplateFields.intervencion} value={formData.intervencion} onChange={handleInputChange} />
+                        <TextareaField {...commonFields.anatomiaPatologica} value={formData.anatomiaPatologica} onChange={handleInputChange} />
+                    </ReportSection>
+                )}
+                <ReportSection title="7. Evolución y Cierre">
+                    {formData.tipoIngreso === 'programado' && formData.intervenido === 'si' ? (
+                        <TextareaField {...programmedTemplateFields.evolucion} value={formData.evolucionProgramado} onChange={handleInputChange} name="evolucionProgramado" rows={4}/>
+                    ) : (
+                        <TextareaField {...urgentTemplateFields.evolucion} value={formData.evolucionUrgente} onChange={handleInputChange} name="evolucionUrgente" rows={4}/>
+                    )}
+                    <TextareaField {...commonFields.fraseFinal} value={formData.fraseFinal} onChange={handleInputChange} />
+                    <InputField {...commonFields.citaRevision} value={formData.citaRevision} onChange={handleInputChange} />
+                </ReportSection>
+              </div>
+
+              <div className="sticky top-8 h-screen-80" style={{ height: 'calc(100vh - 4rem)' }}>
+                <ReportSection title="Informe Generado (Vista Previa)">
+                    <div className="relative h-full">
+                        <textarea
+                            id="generated-report-textarea"
+                            readOnly
+                            value={generatedReport}
+                            className="w-full h-full bg-gray-800 border border-gray-600 rounded-md p-3 text-white font-mono text-sm whitespace-pre-wrap resize-none"
+                        />
+                        <button 
+                            onClick={copyToClipboard}
+                            className="absolute top-3 right-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
+                        >
+                            {copySuccess ? '¡Copiado!' : 'Copiar'}
+                        </button>
+                    </div>
+                </ReportSection>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+
+    </script>
+</body>
+</html>
