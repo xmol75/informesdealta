@@ -316,6 +316,7 @@
         
         report += `ANTECEDENTES PERSONALES:\n- Alergias: ${data.alergias}\n- Hábitos tóxicos: ${data.habitosToxicos || 'No refiere'}\n- Antecedentes patológicos: ${data.antecedentesPatologicos || 'No refiere'}\n- Intervenciones quirúrgicas: ${data.intervencionesPrevias || 'No refiere'}\n- Ingresos Hospitalarios: ${data.ingresosPrevios || 'No refiere'}\n- Sigue tratamiento (según receta electrónica): ${data.tratamientoHabitual || 'No refiere'}\n\n`;
         
+        // --- CÓDIGO CORREGIDO ---
         if (tipoIngreso === 'programado') {
             report += `ENFERMEDAD ACTUAL: ${data.enfermedadActualProgramado || '[No especificado]'}\n\n`;
         } else {
@@ -428,22 +429,23 @@
               </div>
 
               <div className="sticky top-8" style={{ height: 'calc(100vh - 4rem)' }}>
-                <ReportSection title="Informe Generado (Vista Previa)">
-                    <div className="relative h-full">
+                <div className="bg-gray-800 p-4 rounded-lg shadow-md h-full flex flex-col">
+                    <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
+                    <div className="relative flex-grow">
                         <textarea
                             id="generated-report-textarea"
                             readOnly
                             value={generatedReport}
-                            className="w-full h-full bg-gray-800 border border-gray-600 rounded-md p-3 text-white font-mono text-sm whitespace-pre-wrap resize-none"
+                            className="w-full h-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white font-mono text-sm whitespace-pre-wrap resize-none"
                         />
                         <button 
                             onClick={copyToClipboard}
-                            className="absolute top-3 right-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
+                            className="absolute top-1 right-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
                         >
-                            {copySuccess ? copySuccess : 'Copiar'}
+                            {copySuccess ? '¡Copiado!' : 'Copiar'}
                         </button>
                     </div>
-                </ReportSection>
+                </div>
               </div>
 
             </div>
