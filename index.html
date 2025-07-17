@@ -351,7 +351,7 @@
         const reportTextArea = document.getElementById('generated-report-textarea');
         reportTextArea.select();
         document.execCommand('copy');
-        setCopySuccess('¡Informe copiado!');
+        setCopySuccess('¡Copiado!');
         setTimeout(() => setCopySuccess(''), 2000);
       };
 
@@ -402,10 +402,10 @@
                     {formData.tipoIngreso === 'programado' ? (
                         <TextareaField {...programmedTemplateFields.enfermedadActual} value={formData.enfermedadActualProgramado} onChange={handleInputChange} name="enfermedadActualProgramado" />
                     ) : (
-                        <React.Fragment>
+                        <>
                          <TextareaField {...urgentTemplateFields.enfermedadActual} value={formData.enfermedadActualUrgente} onChange={handleInputChange} name="enfermedadActualUrgente" />
                          <TextareaField {...urgentTemplateFields.exploracionFisica} value={formData.exploracionFisica} onChange={handleInputChange} />
-                        </React.Fragment>
+                        </>
                     )}
                     <TextareaField {...commonFields.analitica} value={formData.analitica} onChange={handleInputChange} />
                     <TextareaField {...commonFields.pruebasImagen} value={formData.pruebasImagen} onChange={handleInputChange} />
@@ -427,7 +427,7 @@
                 </ReportSection>
               </div>
 
-              <div className="sticky top-8 h-screen-80" style={{ height: 'calc(100vh - 4rem)' }}>
+              <div className="sticky top-8" style={{ height: 'calc(100vh - 4rem)' }}>
                 <ReportSection title="Informe Generado (Vista Previa)">
                     <div className="relative h-full">
                         <textarea
@@ -440,7 +440,7 @@
                             onClick={copyToClipboard}
                             className="absolute top-3 right-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
                         >
-                            {copySuccess ? '¡Copiado!' : 'Copiar'}
+                            {copySuccess ? copySuccess : 'Copiar'}
                         </button>
                     </div>
                 </ReportSection>
