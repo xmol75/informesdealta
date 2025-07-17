@@ -142,7 +142,7 @@
                         disabled={isLoading}
                         className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
                     >
-                        {isLoading ? 'Analizando...' : 'Analizar y Rellenar (Modo Simulación)'}
+                        {isLoading ? 'Analizando con IA...' : 'Analizar y Rellenar'}
                     </button>
                     {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
                 </div>
@@ -208,51 +208,6 @@
       const handleAiAnalysis = async (clinicalText) => {
         setIsAiLoading(true);
         setAiError('');
-
-        // --- MODO DE SIMULACIÓN ---
-        // Se simula una respuesta de la IA después de 1.5 segundos.
-        // Esto evita el error 403 y te permite probar la funcionalidad.
-        
-        setTimeout(() => {
-            const mockAiData = {
-                diagnosticos: "Colecistitis aguda litiásica (574.00)",
-                problemasSalud: "Hipertensión arterial (HTA), Diabetes Mellitus tipo 2",
-                procedimientos: "Colecistectomía laparoscópica (51.23)",
-                antecedentesPatologicos: "HTA en tratamiento con Enalapril. Diabetes tipo 2 en tratamiento con Metformina.",
-                enfermedadActual: "Paciente que ingresa por dolor en hipocondrio derecho de 48h de evolución con defensa a la palpación. Se realiza ecografía que muestra vesícula de paredes engrosadas con cálculo en su interior.",
-                intervencion: "Colecistectomía laparoscópica realizada por Dr. García el 15/07/2025.",
-                evolucion: "El postoperatorio inmediato transcurre en la unidad de reanimación sin incidencias. Pasa a planta al día siguiente con buen control del dolor.",
-            };
-
-            const updatedFormData = {};
-            for (const key in mockAiData) {
-                if (mockAiData[key]) {
-                    if (key === 'enfermedadActual') {
-                        if (formData.tipoIngreso === 'programado') {
-                            updatedFormData.enfermedadActualProgramado = mockAiData[key];
-                        } else {
-                            updatedFormData.enfermedadActualUrgente = mockAiData[key];
-                        }
-                    } else if (key === 'evolucion') {
-                         if (formData.tipoIngreso === 'programado' && formData.intervenido === 'si') {
-                            updatedFormData.evolucionProgramado = mockAiData[key];
-                        } else {
-                            updatedFormData.evolucionUrgente = mockAiData[key];
-                        }
-                    }
-                    else {
-                        updatedFormData[key] = mockAiData[key];
-                    }
-                }
-            }
-            setFormData(prev => ({ ...prev, ...updatedFormData }));
-            setIsAiLoading(false);
-        }, 1500);
-
-
-        /*
-        // --- CÓDIGO REAL DE LA IA (actualmente desactivado) ---
-        // Para usarlo, borra el bloque "MODO DE SIMULACIÓN" de arriba y elimina las líneas de comentario de este bloque.
         
         const prompt = `Eres un asistente médico experto en analizar informes clínicos para generar resúmenes de alta. Analiza el siguiente texto clínico. Extrae la información solicitada y devuélvela estrictamente en formato JSON, siguiendo el esquema proporcionado. Si un campo no se encuentra en el texto, devuelve un string vacío para ese campo. El texto a analizar es:\n\n---INICIO TEXTO---\n${clinicalText}\n---FIN TEXTO---`;
 
@@ -282,7 +237,9 @@
         };
 
         try {
-            const apiKey = ""; // Dejar vacío, se gestiona automáticamente
+            // En este entorno, la clave de API se gestiona automáticamente.
+            // Si alojas este archivo en otro lugar, necesitarás tu propia clave de Google AI Studio.
+            const apiKey = ""; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
             const response = await fetch(apiUrl, {
@@ -335,7 +292,6 @@
         } finally {
             setIsAiLoading(false);
         }
-        */
       };
 
       useEffect(() => {
