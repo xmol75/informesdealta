@@ -446,7 +446,7 @@ ${patologicaText || "No proporcionado"}
               </div>
 
               {/* --- COLUMNA DERECHA (IA Y VISTA PREVIA) --- */}
-              <div className="sticky top-8 flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
+              <div className="flex flex-col">
                 <AIAssistant onProcessAll={handleProcessAll} isLoading={isAiLoading} error={aiError} />
                 <div className="bg-gray-800 p-4 rounded-lg shadow-md flex-grow flex flex-col mt-6">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
