@@ -88,9 +88,10 @@
         const [ingresoText, setIngresoText] = useState('');
         const [quirurgicaText, setQuirurgicaText] = useState('');
         const [evolutivosText, setEvolutivosText] = useState('');
+        const [patologicaText, setPatologicaText] = useState('');
 
         const handleProcess = () => {
-            onProcessAll({ ingresoText, quirurgicaText, evolutivosText });
+            onProcessAll({ ingresoText, quirurgicaText, evolutivosText, patologicaText });
         };
 
         return (
@@ -101,8 +102,8 @@
                         <textarea
                             value={ingresoText}
                             onChange={(e) => setIngresoText(e.target.value)}
-                            placeholder="Pegar aquí el informe de ingreso para extraer antecedentes, problemas de salud y enfermedad actual..."
-                            rows={6}
+                            placeholder="Extrae antecedentes, problemas de salud y enfermedad actual..."
+                            rows={4}
                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                     </div>
@@ -111,8 +112,8 @@
                         <textarea
                             value={quirurgicaText}
                             onChange={(e) => setQuirurgicaText(e.target.value)}
-                            placeholder="Pegar aquí la hoja quirúrgica para extraer procedimientos y GRD..."
-                            rows={6}
+                            placeholder="Extrae la intervención principal, procedimientos y GRD..."
+                            rows={4}
                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                     </div>
@@ -121,8 +122,18 @@
                         <textarea
                             value={evolutivosText}
                             onChange={(e) => setEvolutivosText(e.target.value)}
-                            placeholder="Pegar aquí las notas de evolución para generar el resumen, pruebas y añadir diagnósticos/procedimientos..."
-                            rows={6}
+                            placeholder="Genera el resumen evolutivo, pruebas y procedimientos menores..."
+                            rows={4}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">4. Pegar Anatomía Patológica (si aplica)</label>
+                        <textarea
+                            value={patologicaText}
+                            onChange={(e) => setPatologicaText(e.target.value)}
+                            placeholder="Extrae el resultado de anatomía patológica..."
+                            rows={4}
                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                         />
                     </div>
@@ -202,18 +213,19 @@
         return 'N/A';
       }, [formData.fechaIngreso, formData.fechaAlta]);
 
-      const handleProcessAll = async ({ ingresoText, quirurgicaText, evolutivosText }) => {
+      const handleProcessAll = async ({ ingresoText, quirurgicaText, evolutivosText, patologicaText }) => {
         setIsAiLoading(true);
         setAiError('');
         
-        const prompt = `Eres un asistente médico experto en codificación clínica y en analizar informes para generar resúmenes de alta. Te proporcionaré hasta tres textos: una nota de ingreso, una hoja quirúrgica y notas de evolución. Tu tarea es analizar todos los textos y rellenar un objeto JSON con la información extraída. Sigue estas reglas:
+        const prompt = `Eres un asistente médico experto en codificación clínica y en analizar informes para generar resúmenes de alta. Te proporcionaré hasta cuatro textos. Tu tarea es analizar todos los textos y rellenar un objeto JSON con la información extraída. Sigue estas reglas:
 
 1.  **Codificación CIE-9**: Para cada diagnóstico, problema de salud o procedimiento que encuentres en CUALQUIER texto, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea (ej: "- Colecistitis aguda (CIE-9: 575.0)").
 2.  **Acumulación de Datos**: Combina los diagnósticos y procedimientos de todos los textos. No sobrescribas, acumula la información.
 3.  **Extracción por Documento**:
     * **De la NOTA DE INGRESO**: Extrae 'problemasSalud', 'antecedentesPatologicos', 'intervencionesPrevias', 'tratamientoHabitual', 'enfermedadActual', 'exploracionFisica', 'analiticaIngreso', y 'pruebasImagenIngreso'.
-    * **De la HOJA QUIRÚRGICA**: Extrae 'procedimientos', 'grd', 'intervencion' (descripción de la cirugía) y 'anatomiaPatologica'.
-    * **De los EVOLUTIVOS**: Extrae un resumen para 'evolucionResumen', y listas para 'evolucionAnalitica', 'evolucionPruebasImagen' y 'evolucionProcedimientos'. También extrae cualquier nuevo diagnóstico o procedimiento que no estuviera en los textos anteriores.
+    * **De la HOJA QUIRÚRGICA**: Extrae 'procedimientos' (solo el procedimiento quirúrgico principal), 'grd', e 'intervencion' (descripción detallada de la cirugía).
+    * **De los EVOLUTIVOS**: Extrae un resumen para 'evolucionResumen', y listas para 'evolucionAnalitica', 'evolucionPruebasImagen' y 'evolucionProcedimientos' (procedimientos menores, no la cirugía principal). También extrae cualquier nuevo diagnóstico.
+    * **De la ANATOMÍA PATOLÓGICA**: Extrae únicamente el resultado para 'anatomiaPatologica'.
 4.  **Formato JSON**: Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra, devuelve un string vacío.
 
 ---
@@ -225,6 +237,9 @@ ${quirurgicaText || "No proporcionado"}
 ---
 **TEXTO 3: EVOLUTIVOS**
 ${evolutivosText || "No proporcionado"}
+---
+**TEXTO 4: ANATOMÍA PATOLÓGICA**
+${patologicaText || "No proporcionado"}
 ---`;
 
         const payload = {
@@ -441,9 +456,9 @@ ${evolutivosText || "No proporcionado"}
               </div>
 
               {/* --- COLUMNA DERECHA (IA Y VISTA PREVIA) --- */}
-              <div className="sticky top-8 flex flex-col space-y-6" style={{ height: 'calc(100vh - 4rem)' }}>
+              <div className="sticky top-8 flex flex-col" style={{ height: 'calc(100vh - 4rem)' }}>
                 <AIAssistant onProcessAll={handleProcessAll} isLoading={isAiLoading} error={aiError} />
-                <div className="bg-gray-800 p-4 rounded-lg shadow-md flex-grow flex flex-col">
+                <div className="bg-gray-800 p-4 rounded-lg shadow-md flex-grow flex flex-col mt-6">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
                     <div className="relative flex-grow">
                         <textarea
