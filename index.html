@@ -237,9 +237,8 @@
         };
 
         try {
-            // En este entorno, la clave de API se gestiona automáticamente.
-            // Si alojas este archivo en otro lugar, necesitarás tu propia clave de Google AI Studio.
-            const apiKey = ""; 
+            // Inserta aquí tu clave de API de Google AI Studio
+            const apiKey = "AIzaSyA1tuFDZ1HIEUr4-FhPz9DkuGPNvyZdNnQ"; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
             const response = await fetch(apiUrl, {
