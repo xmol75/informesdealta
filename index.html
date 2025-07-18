@@ -41,37 +41,6 @@
     
     const { useState, useEffect, useCallback } = React;
 
-    // --- DATOS DE PLANTILLAS Y CAMPOS ---
-    const commonFields = {
-      diagnosticos: { id: 'diagnosticos', label: 'DIAGNÓSTICOS DEL EPISODIO (incluir CIE-9)', type: 'textarea' },
-      problemasSalud: { id: 'problemasSalud', label: 'PROBLEMAS DE SALUD', type: 'textarea' },
-      procedimientos: { id: 'procedimientos', label: 'PROCEDIMIENTOS EN EL EPISODIO (incluir CIE-9)', type: 'textarea' },
-      grd: { id: 'grd', label: 'GRD', type: 'text' },
-      alergias: { id: 'alergias', label: 'Alergias', type: 'text', defaultValue: 'Sin alergias medicamentosas conocidas.' },
-      habitosToxicos: { id: 'habitosToxicos', label: 'Hábitos tóxicos', type: 'text' },
-      antecedentesPatologicos: { id: 'antecedentesPatologicos', label: 'Antecedentes patológicos', type: 'textarea' },
-      intervencionesPrevias: { id: 'intervencionesPrevias', label: 'Intervenciones quirúrgicas', type: 'textarea' },
-      ingresosPrevios: { id: 'ingresosPrevios', label: 'Ingresos Hospitalarios', type: 'textarea' },
-      tratamientoHabitual: { id: 'tratamientoHabitual', label: 'Sigue tratamiento (según receta electrónica)', type: 'textarea' },
-      analitica: { id: 'analitica', label: 'Analítica', type: 'textarea' },
-      pruebasImagen: { id: 'pruebasImagen', label: 'Pruebas de imagen', type: 'textarea' },
-      anatomiaPatologica: { id: 'anatomiaPatologica', label: 'Anatomía Patológica', type: 'textarea' },
-      fraseFinal: { id: 'fraseFinal', label: 'Frase final', type: 'textarea', defaultValue: 'Durante el resto de la estancia se mantiene sin presentar complicaciones, con tolerancia oral correcta y tránsito intestinal reestablecido, procediendo a alta el día de la fecha.'},
-      citaRevision: { id: 'citaRevision', label: 'Cita para revisión en Consultas Externas', type: 'text', defaultValue: 'Citado por Secretaría de Cirugía.' }
-    };
-
-    const programmedTemplateFields = {
-      enfermedadActual: { id: 'enfermedadActualProgramado', label: 'Enfermedad actual', type: 'textarea' },
-      intervencion: { id: 'intervencion', label: 'Intervención quirúrgica (Dres, fecha)', type: 'text' },
-      evolucion: { id: 'evolucionProgramado', label: 'Evolución', type: 'textarea', defaultValue: 'El postoperatorio inmediato transcurre en ' },
-    };
-
-    const urgentTemplateFields = {
-      exploracionFisica: { id: 'exploracionFisica', label: 'Exploración física (Signos vitales)', type: 'textarea' },
-      enfermedadActual: { id: 'enfermedadActualUrgente', label: 'Enfermedad actual', type: 'textarea' },
-      evolucion: { id: 'evolucionUrgente', label: 'Evolución', type: 'textarea', defaultValue: 'Tras una estancia en el Área de Observación de Urgencias se procede a ingreso en planta de Hospitalización del Servicio de Cirugía en la Unidad [UNIDAD], bajo la orientación diagnóstica de [DIAGNÓSTICO]. Se inicia tratamiento conservador consistente en [TRATAMIENTO].' },
-    };
-
     // --- COMPONENTES DE LA UI ---
     const InputField = ({ id, label, value, onChange, type = 'text' }) => (
       <div className="mb-4">
@@ -115,45 +84,65 @@
       </ReportSection>
     );
 
-    const AIAssistant = ({ onAnalysisComplete, isLoading, error }) => {
-        const [aiInputText, setAiInputText] = useState('');
+    const AIAssistant = ({ onProcessAll, isLoading, error }) => {
+        const [ingresoText, setIngresoText] = useState('');
+        const [quirurgicaText, setQuirurgicaText] = useState('');
+        const [evolutivosText, setEvolutivosText] = useState('');
 
-        const handleAnalysis = () => {
-            if (!aiInputText.trim()) {
-                alert('Por favor, pega el texto del informe para analizar.');
-                return;
-            }
-            onAnalysisComplete(aiInputText);
+        const handleProcess = () => {
+            onProcessAll({ ingresoText, quirurgicaText, evolutivosText });
         };
 
         return (
-            <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-md">
-                <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Asistente IA</h3>
-                <div className="p-2 bg-gray-700 rounded-md">
-                    <p className="text-sm text-gray-300 mb-2">Pega aquí el informe de ingreso, hoja quirúrgica o notas de evolución para rellenar los campos automáticamente.</p>
-                    <textarea
-                        value={aiInputText}
-                        onChange={(e) => setAiInputText(e.target.value)}
-                        placeholder="Ejemplo de texto: Paciente varón de 65 años con antecedentes de HTA y diabetes tipo 2. Ingresa por colecistitis aguda. Se realiza colecistectomía laparoscópica sin incidencias. Evolución favorable."
-                        rows={8}
-                        className="w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    />
-                    <button
-                        onClick={handleAnalysis}
-                        disabled={isLoading}
-                        className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? 'Analizando con IA...' : 'Analizar y Rellenar'}
-                    </button>
-                    {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
+            <ReportSection title="Asistente IA por Documentos">
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">1. Pegar Nota de Ingreso</label>
+                        <textarea
+                            value={ingresoText}
+                            onChange={(e) => setIngresoText(e.target.value)}
+                            placeholder="Pegar aquí el informe de ingreso para extraer antecedentes, problemas de salud y enfermedad actual..."
+                            rows={6}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">2. Pegar Hoja Quirúrgica (si aplica)</label>
+                        <textarea
+                            value={quirurgicaText}
+                            onChange={(e) => setQuirurgicaText(e.target.value)}
+                            placeholder="Pegar aquí la hoja quirúrgica para extraer procedimientos y GRD..."
+                            rows={6}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">3. Pegar Evolutivos</label>
+                        <textarea
+                            value={evolutivosText}
+                            onChange={(e) => setEvolutivosText(e.target.value)}
+                            placeholder="Pegar aquí las notas de evolución para generar el resumen, pruebas y añadir diagnósticos/procedimientos..."
+                            rows={6}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                    </div>
                 </div>
-            </div>
+                <button
+                    onClick={handleProcess}
+                    disabled={isLoading}
+                    className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                >
+                    {isLoading ? 'Procesando con IA...' : 'Procesar Todo y Rellenar Informe'}
+                </button>
+                {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
+            </ReportSection>
         );
     };
 
     // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
     function App() {
       const [formData, setFormData] = useState({
+        // Datos generales
         tipoIngreso: 'programado',
         intervenido: 'si',
         fechaIngreso: '',
@@ -162,27 +151,34 @@
         edad: '',
         motivoProgramado: '',
         motivoUrgente: '',
+        // Datos del episodio
         diagnosticos: '',
         problemasSalud: '',
         procedimientos: '',
         grd: '',
-        alergias: commonFields.alergias.defaultValue,
+        // Antecedentes
+        alergias: 'Sin alergias medicamentosas conocidas.',
         habitosToxicos: '',
         antecedentesPatologicos: '',
         intervencionesPrevias: '',
         ingresosPrevios: '',
         tratamientoHabitual: '',
-        enfermedadActualProgramado: '',
-        enfermedadActualUrgente: '',
+        // Enfermedad Actual
+        enfermedadActual: '',
         exploracionFisica: '',
-        analitica: '',
-        pruebasImagen: '',
+        analiticaIngreso: '',
+        pruebasImagenIngreso: '',
+        // Intervención
         intervencion: '',
         anatomiaPatologica: '',
-        evolucionProgramado: programmedTemplateFields.evolucion.defaultValue,
-        evolucionUrgente: urgentTemplateFields.evolucion.defaultValue,
-        fraseFinal: commonFields.fraseFinal.defaultValue,
-        citaRevision: commonFields.citaRevision.defaultValue,
+        // Evolución
+        evolucionResumen: '',
+        evolucionAnalitica: '',
+        evolucionPruebasImagen: '',
+        evolucionProcedimientos: '',
+        fraseFinal: 'Durante el resto de la estancia se mantiene sin presentar complicaciones, con tolerancia oral correcta y tránsito intestinal reestablecido, procediendo a alta el día de la fecha.',
+        // Recomendaciones
+        citaRevision: 'Citado por Secretaría de Cirugía.',
       });
 
       const [generatedReport, setGeneratedReport] = useState('');
@@ -206,21 +202,30 @@
         return 'N/A';
       }, [formData.fechaIngreso, formData.fechaAlta]);
 
-      const handleAiAnalysis = async (clinicalText) => {
+      const handleProcessAll = async ({ ingresoText, quirurgicaText, evolutivosText }) => {
         setIsAiLoading(true);
         setAiError('');
         
-        const prompt = `Eres un asistente médico experto en codificación clínica y en analizar informes para generar resúmenes de alta. Analiza el siguiente texto clínico. Tu tarea es:
-1. Extraer los diagnósticos principales y secundarios. Para cada uno, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea (ej: "- Colecistitis aguda (CIE-9: 575.0)").
-2. Extraer los procedimientos quirúrgicos y terapéuticos. Para cada uno, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea.
-3. Extraer el GRD (Grupo Relacionado por el Diagnóstico) si se menciona.
-4. Extraer el resto de la información solicitada en el esquema.
-Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra en el texto, devuelve un string vacío para ese campo.
+        const prompt = `Eres un asistente médico experto en codificación clínica y en analizar informes para generar resúmenes de alta. Te proporcionaré hasta tres textos: una nota de ingreso, una hoja quirúrgica y notas de evolución. Tu tarea es analizar todos los textos y rellenar un objeto JSON con la información extraída. Sigue estas reglas:
 
-Texto a analizar:
----INICIO TEXTO---
-${clinicalText}
----FIN TEXTO---`;
+1.  **Codificación CIE-9**: Para cada diagnóstico, problema de salud o procedimiento que encuentres en CUALQUIER texto, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea (ej: "- Colecistitis aguda (CIE-9: 575.0)").
+2.  **Acumulación de Datos**: Combina los diagnósticos y procedimientos de todos los textos. No sobrescribas, acumula la información.
+3.  **Extracción por Documento**:
+    * **De la NOTA DE INGRESO**: Extrae 'problemasSalud', 'antecedentesPatologicos', 'intervencionesPrevias', 'tratamientoHabitual', 'enfermedadActual', 'exploracionFisica', 'analiticaIngreso', y 'pruebasImagenIngreso'.
+    * **De la HOJA QUIRÚRGICA**: Extrae 'procedimientos', 'grd', 'intervencion' (descripción de la cirugía) y 'anatomiaPatologica'.
+    * **De los EVOLUTIVOS**: Extrae un resumen para 'evolucionResumen', y listas para 'evolucionAnalitica', 'evolucionPruebasImagen' y 'evolucionProcedimientos'. También extrae cualquier nuevo diagnóstico o procedimiento que no estuviera en los textos anteriores.
+4.  **Formato JSON**: Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra, devuelve un string vacío.
+
+---
+**TEXTO 1: NOTA DE INGRESO**
+${ingresoText || "No proporcionado"}
+---
+**TEXTO 2: HOJA QUIRÚRGICA**
+${quirurgicaText || "No proporcionado"}
+---
+**TEXTO 3: EVOLUTIVOS**
+${evolutivosText || "No proporcionado"}
+---`;
 
         const payload = {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -238,18 +243,20 @@ ${clinicalText}
                         tratamientoHabitual: { type: "STRING" },
                         enfermedadActual: { type: "STRING" },
                         exploracionFisica: { type: "STRING" },
-                        analitica: { type: "STRING" },
-                        pruebasImagen: { type: "STRING" },
+                        analiticaIngreso: { type: "STRING" },
+                        pruebasImagenIngreso: { type: "STRING" },
                         intervencion: { type: "STRING" },
                         anatomiaPatologica: { type: "STRING" },
-                        evolucion: { type: "STRING" },
+                        evolucionResumen: { type: "STRING" },
+                        evolucionAnalitica: { type: "STRING" },
+                        evolucionPruebasImagen: { type: "STRING" },
+                        evolucionProcedimientos: { type: "STRING" },
                     },
                 },
             },
         };
 
         try {
-            // Inserta aquí tu clave de API de Google AI Studio
             const apiKey = "AIzaSyA1tuFDZ1HIEUr4-FhPz9DkuGPNvyZdNnQ"; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
@@ -269,29 +276,14 @@ ${clinicalText}
                 const aiJsonText = result.candidates[0].content.parts[0].text;
                 const aiData = JSON.parse(aiJsonText);
                 
-                const updatedFormData = {};
-                for (const key in aiData) {
-                    if (aiData[key]) {
-                        if (key === 'enfermedadActual') {
-                            if (formData.tipoIngreso === 'programado') {
-                                updatedFormData.enfermedadActualProgramado = aiData[key];
-                            } else {
-                                updatedFormData.enfermedadActualUrgente = aiData[key];
-                            }
-                        } else if (key === 'evolucion') {
-                             if (formData.tipoIngreso === 'programado' && formData.intervenido === 'si') {
-                                updatedFormData.evolucionProgramado = aiData[key];
-                            } else {
-                                updatedFormData.evolucionUrgente = aiData[key];
-                            }
-                        }
-                        else {
-                            updatedFormData[key] = aiData[key];
-                        }
-                    }
-                }
-                
-                setFormData(prev => ({ ...prev, ...updatedFormData }));
+                // Fusionar datos de la IA con el formulario existente
+                setFormData(prev => ({
+                    ...prev,
+                    ...aiData,
+                    // Lógica de acumulación para diagnósticos y procedimientos
+                    diagnosticos: [prev.diagnosticos, aiData.diagnosticos].filter(Boolean).join('\n'),
+                    procedimientos: [prev.procedimientos, aiData.procedimientos].filter(Boolean).join('\n'),
+                }));
 
             } else {
                 throw new Error("La respuesta de la IA no tuvo el formato esperado.");
@@ -319,46 +311,59 @@ ${clinicalText}
         report += `PROBLEMAS DE SALUD:\n${data.problemasSalud || '[No especificado]'}\n\n`;
         report += `PROCEDIMIENTOS EN EL EPISODIO:\n${data.procedimientos || '[No especificado]'}\n\n`;
         report += `GRD: ${data.grd || '[No especificado]'}\n\n------------------------------------------------------------\n\n`;
+        
         report += `Fecha de Ingreso: ${formatDate(data.fechaIngreso)}\nFecha de Alta: ${formatDate(data.fechaAlta)}\nDuración de la estancia: ${calculateDuration()}\n\n`;
 
         if (tipoIngreso === 'programado') {
-          report += `MOTIVO DE CONSULTA: Paciente de ${data.edad || '[edad]'} años que ingresa de manera programada para intervenirse quirúrgicamente de ${data.motivoProgramado || '[intervención]'}.\n\n`;
+          report += `MOTIVO DE INGRESO: Paciente de ${data.edad || '[edad]'} años que ingresa de manera programada para intervenirse quirúrgicamente de ${data.motivoProgramado || '[intervención]'}.\n\n`;
         } else {
-          report += `MOTIVO DE CONSULTA: Paciente de ${data.edad || '[edad]'} años que acude a urgencias el día ${formatDate(data.fechaUrgencias)} por ${data.motivoUrgente || '[motivo]'}.\n\n`;
+          report += `MOTIVO DE CONSULTA EN URGENCIAS: Paciente de ${data.edad || '[edad]'} años que acude a urgencias el día ${formatDate(data.fechaUrgencias)} por ${data.motivoUrgente || '[motivo]'}.\n\n`;
         }
         
         report += `ANTECEDENTES PERSONALES:\n- Alergias: ${data.alergias}\n- Hábitos tóxicos: ${data.habitosToxicos || 'No refiere'}\n- Antecedentes patológicos: ${data.antecedentesPatologicos || 'No refiere'}\n- Intervenciones quirúrgicas: ${data.intervencionesPrevias || 'No refiere'}\n- Ingresos Hospitalarios: ${data.ingresosPrevios || 'No refiere'}\n- Sigue tratamiento (según receta electrónica): ${data.tratamientoHabitual || 'No refiere'}\n\n`;
         
-        if (tipoIngreso === 'programado') {
-            report += `ENFERMEDAD ACTUAL: ${data.enfermedadActualProgramado || '[No especificado]'}\n\n`;
-        } else {
-            report += `ENFERMEDAD ACTUAL: ${data.enfermedadActualUrgente || '[No especificado]'}\n\n`;
-            report += `EXPLORACIÓN FÍSICA (al ingreso por Urgencias):\n${data.exploracionFisica || '[No especificado]'}\n\n`;
-        }
-
-        report += `PRUEBAS COMPLEMENTARIAS:\n· Analítica: ${data.analitica || 'Ver historia clínica.'}\n· Pruebas de imagen: ${data.pruebasImagen || 'Ver historia clínica.'}\n\n`;
-
-        if (intervenido === 'si') {
-          report += `INTERVENCIÓN QUIRÚRGICA: ${data.intervencion || '[No especificado]'}\n\n`;
-          report += `ANATOMÍA PATOLÓGICA: ${data.anatomiaPatologica || 'Pendiente de resultado.'}\n\n`;
-        }
-
-        report += `EVOLUCIÓN:\n`;
+        let enfermedadActualCompleta = data.enfermedadActual || '[No especificado]';
         if (tipoIngreso === 'programado' && intervenido === 'si') {
-          report += `${data.evolucionProgramado}\n`;
-        } else {
-          report += `${data.evolucionUrgente}\n`;
+            enfermedadActualCompleta += '\nTras ser informado/a del proceso y firmar el consentimiento informado, es remitido/a al Servicio de Anestesia para valoración prequirúrgica, informando que no existe contraindicación para la intervención quirúrgica.';
         }
+        report += `ENFERMEDAD ACTUAL:\n${enfermedadActualCompleta}\n\n`;
+        if (data.exploracionFisica) report += `Exploración física y signos vitales:\n${data.exploracionFisica}\n\n`;
+        if (data.analiticaIngreso) report += `Pruebas de laboratorio al ingreso:\n${data.analiticaIngreso}\n\n`;
+        if (data.pruebasImagenIngreso) report += `Pruebas de imagen al ingreso:\n${data.pruebasImagenIngreso}\n\n`;
+
+        if (intervenido === 'si' && data.intervencion) {
+          report += `INTERVENCIÓN QUIRÚRGICA:\n${data.intervencion}\n\n`;
+          if (data.anatomiaPatologica) report += `ANATOMÍA PATOLÓGICA:\n${data.anatomiaPatologica}\n\n`;
+        }
+        
+        let evolucionCompleta = '';
+        if (tipoIngreso === 'urgente') {
+            evolucionCompleta += `Tras una estancia en el Área de Observación de Urgencias se procede a ingreso en planta de Hospitalización del Servicio de Cirugía en la Unidad [UNIDAD], bajo la orientación diagnóstica de [DIAGNÓSTICO]. Se inicia tratamiento conservador consistente en [TRATAMIENTO].\n`;
+        } else if (tipoIngreso === 'programado' && intervenido === 'si') {
+            evolucionCompleta += `El postoperatorio transcurre en la Unidad de [poner unidad].\n`;
+        }
+        evolucionCompleta += data.evolucionResumen || '';
+        report += `EVOLUCIÓN:\n${evolucionCompleta}\n\n`;
+        if (data.evolucionAnalitica) report += `Pruebas analíticas durante la evolución:\n${data.evolucionAnalitica}\n\n`;
+        if (data.evolucionPruebasImagen) report += `Pruebas radiológicas durante la evolución:\n${data.evolucionPruebasImagen}\n\n`;
+        if (data.evolucionProcedimientos) report += `Procedimientos durante la evolución:\n${data.evolucionProcedimientos}\n\n`;
+        
         report += `${data.fraseFinal}\n\n`;
 
-        report += `RECOMENDACIONES AL ALTA:\n- Dieta sin grasas y tratamientos habituales (si procede).\n- Analgesia: ibuprofeno 600mg/8h vo + paracetamol 1g/8h vo alterno si dolor.\n- Omeprazol 20mg/24h vo 20 minutos antes del desayuno.\n`;
+        report += `RECOMENDACIONES AL ALTA:\n`;
+        report += `- Dieta sin grasas y tratamientos habituales (si hubiera).\n`;
+        report += `- Analgesia: ibuprofeno 600mg/8h vo + paracetamol 1g/8h vo alterno si dolor.\n`;
+        report += `- Omeprazol 20mg/24h vo 20 minutos antes del desayuno.\n`;
         if (intervenido === 'si') {
-          report += `- Retirar grapas en el centro de salud a los 9 días de la intervención.\n`;
+          report += `- Higiene diaria de las heridas quirúrgicas.\n`;
+          report += `- Acudir a su Centro de Salud a los 9 días de la intervención para retirada de grapas previa cita telefónica.\n`;
         }
-        report += `- Reposo domiciliario e ir reincorporándose gradualmente en la actividad cotidiana.\n- Si empeora, acudir a Urgencias de Cirugía del Hospital Universitario Son Espases.\n- Acudirá a revisión en Consultas Externas de Cirugía (Unidad HByT): ${data.citaRevision}\n`;
+        report += `- Reposo domiciliario e ir reincorporándose gradualmente en la actividad cotidiana.\n`;
+        report += `- Si empeora acudir a UCIAs de Cirugía del Hospital Universitario Son Espases.\n`;
+        report += `- Acudirá a revisión en Consultas Externas de Cirugía (Unidad HBP) el día y la hora citados por Secretaría de Cirugía: ${data.citaRevision}\n`;
 
         setGeneratedReport(report);
-      }, [formData, calculateDuration]);
+      }, [formData]);
 
       const copyToClipboard = () => {
         const reportTextArea = document.getElementById('generated-report-textarea');
@@ -379,14 +384,14 @@ ${clinicalText}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
-              {/* --- COLUMNA IZQUIERDA (FORMULARIO) --- */}
+              {/* --- COLUMNA IZQUIERDA (FORMULARIO MANUAL) --- */}
               <div className="flex flex-col space-y-6">
                 <InitialQuestions data={formData} handleInputChange={handleInputChange} />
                 <ReportSection title="2. Datos del Episodio">
-                  <TextareaField {...commonFields.diagnosticos} value={formData.diagnosticos} onChange={handleInputChange} />
-                  <TextareaField {...commonFields.problemasSalud} value={formData.problemasSalud} onChange={handleInputChange} />
-                  <TextareaField {...commonFields.procedimientos} value={formData.procedimientos} onChange={handleInputChange} />
-                  <InputField {...commonFields.grd} value={formData.grd} onChange={handleInputChange} />
+                  <TextareaField id="diagnosticos" label="Diagnósticos del Episodio" value={formData.diagnosticos} onChange={handleInputChange} />
+                  <TextareaField id="problemasSalud" label="Problemas de Salud" value={formData.problemasSalud} onChange={handleInputChange} />
+                  <TextareaField id="procedimientos" label="Procedimientos en el Episodio" value={formData.procedimientos} onChange={handleInputChange} />
+                  <InputField id="grd" label="GRD" value={formData.grd} onChange={handleInputChange} />
                 </ReportSection>
                 <ReportSection title="3. Fechas y Motivo">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -398,52 +403,47 @@ ${clinicalText}
                     </div>
                      <InputField label="Edad del paciente" id="edad" type="number" value={formData.edad} onChange={handleInputChange} />
                     {formData.tipoIngreso === 'programado' ? (
-                        <InputField label="Intervención programada" id="motivoProgramado" value={formData.motivoProgramado} onChange={handleInputChange} />
+                        <InputField label="Motivo de Ingreso" id="motivoProgramado" value={formData.motivoProgramado} onChange={handleInputChange} />
                     ) : (
-                        <InputField label="Motivo de consulta en urgencias" id="motivoUrgente" value={formData.motivoUrgente} onChange={handleInputChange} />
+                        <InputField label="Motivo de Consulta en Urgencias" id="motivoUrgente" value={formData.motivoUrgente} onChange={handleInputChange} />
                     )}
                 </ReportSection>
                 <ReportSection title="4. Antecedentes Personales">
-                    <InputField {...commonFields.alergias} value={formData.alergias} onChange={handleInputChange} />
-                    <InputField {...commonFields.habitosToxicos} value={formData.habitosToxicos} onChange={handleInputChange} />
-                    <TextareaField {...commonFields.antecedentesPatologicos} value={formData.antecedentesPatologicos} onChange={handleInputChange} />
-                    <TextareaField {...commonFields.intervencionesPrevias} value={formData.intervencionesPrevias} onChange={handleInputChange} />
-                    <TextareaField {...commonFields.ingresosPrevios} value={formData.ingresosPrevios} onChange={handleInputChange} />
-                    <TextareaField {...commonFields.tratamientoHabitual} value={formData.tratamientoHabitual} onChange={handleInputChange} />
+                    <InputField id="alergias" label="Alergias" value={formData.alergias} onChange={handleInputChange} />
+                    <InputField id="habitosToxicos" label="Hábitos Tóxicos" value={formData.habitosToxicos} onChange={handleInputChange} />
+                    <TextareaField id="antecedentesPatologicos" label="Antecedentes Patológicos" value={formData.antecedentesPatologicos} onChange={handleInputChange} />
+                    <TextareaField id="intervencionesPrevias" label="Intervenciones Quirúrgicas Previas" value={formData.intervencionesPrevias} onChange={handleInputChange} />
+                    <TextareaField id="ingresosPrevios" label="Ingresos Previos" value={formData.ingresosPrevios} onChange={handleInputChange} />
+                    <TextareaField id="tratamientoHabitual" label="Tratamiento Habitual" value={formData.tratamientoHabitual} onChange={handleInputChange} />
                 </ReportSection>
-                <ReportSection title="5. Enfermedad Actual y Pruebas">
-                    {formData.tipoIngreso === 'programado' ? (
-                        <TextareaField {...programmedTemplateFields.enfermedadActual} value={formData.enfermedadActualProgramado} onChange={handleInputChange} name="enfermedadActualProgramado" />
-                    ) : (
-                        <>
-                         <TextareaField {...urgentTemplateFields.enfermedadActual} value={formData.enfermedadActualUrgente} onChange={handleInputChange} name="enfermedadActualUrgente" />
-                         <TextareaField {...urgentTemplateFields.exploracionFisica} value={formData.exploracionFisica} onChange={handleInputChange} />
-                        </>
-                    )}
-                    <TextareaField {...commonFields.analitica} value={formData.analitica} onChange={handleInputChange} />
-                    <TextareaField {...commonFields.pruebasImagen} value={formData.pruebasImagen} onChange={handleInputChange} />
+                <ReportSection title="5. Enfermedad Actual">
+                    <TextareaField id="enfermedadActual" label="Resumen Enfermedad Actual" value={formData.enfermedadActual} onChange={handleInputChange} rows={5} />
+                    <TextareaField id="exploracionFisica" label="Exploración Física y Signos Vitales" value={formData.exploracionFisica} onChange={handleInputChange} />
+                    <TextareaField id="analiticaIngreso" label="Pruebas de Laboratorio al Ingreso" value={formData.analiticaIngreso} onChange={handleInputChange} />
+                    <TextareaField id="pruebasImagenIngreso" label="Pruebas de Imagen al Ingreso" value={formData.pruebasImagenIngreso} onChange={handleInputChange} />
                 </ReportSection>
                 {formData.intervenido === 'si' && (
                     <ReportSection title="6. Intervención Quirúrgica">
-                        <InputField {...programmedTemplateFields.intervencion} value={formData.intervencion} onChange={handleInputChange} />
-                        <TextareaField {...commonFields.anatomiaPatologica} value={formData.anatomiaPatologica} onChange={handleInputChange} />
+                        <TextareaField id="intervencion" label="Descripción de la Intervención" value={formData.intervencion} onChange={handleInputChange} />
+                        <TextareaField id="anatomiaPatologica" label="Anatomía Patológica" value={formData.anatomiaPatologica} onChange={handleInputChange} />
                     </ReportSection>
                 )}
                 <ReportSection title="7. Evolución y Cierre">
-                    {formData.tipoIngreso === 'programado' && formData.intervenido === 'si' ? (
-                        <TextareaField {...programmedTemplateFields.evolucion} value={formData.evolucionProgramado} onChange={handleInputChange} name="evolucionProgramado" rows={4}/>
-                    ) : (
-                        <TextareaField {...urgentTemplateFields.evolucion} value={formData.evolucionUrgente} onChange={handleInputChange} name="evolucionUrgente" rows={4}/>
-                    )}
-                    <TextareaField {...commonFields.fraseFinal} value={formData.fraseFinal} onChange={handleInputChange} />
-                    <InputField {...commonFields.citaRevision} value={formData.citaRevision} onChange={handleInputChange} />
+                    <TextareaField id="evolucionResumen" label="Resumen Evolutivo" value={formData.evolucionResumen} onChange={handleInputChange} rows={5}/>
+                    <TextareaField id="evolucionAnalitica" label="Pruebas Analíticas (Evolución)" value={formData.evolucionAnalitica} onChange={handleInputChange} />
+                    <TextareaField id="evolucionPruebasImagen" label="Pruebas Radiológicas (Evolución)" value={formData.evolucionPruebasImagen} onChange={handleInputChange} />
+                    <TextareaField id="evolucionProcedimientos" label="Procedimientos (Evolución)" value={formData.evolucionProcedimientos} onChange={handleInputChange} />
+                    <TextareaField id="fraseFinal" label="Frase para el Alta" value={formData.fraseFinal} onChange={handleInputChange} />
+                </ReportSection>
+                 <ReportSection title="8. Recomendaciones al Alta">
+                    <TextareaField id="citaRevision" label="Cita para Revisión" value={formData.citaRevision} onChange={handleInputChange} rows={1}/>
                 </ReportSection>
               </div>
 
               {/* --- COLUMNA DERECHA (IA Y VISTA PREVIA) --- */}
               <div className="sticky top-8 flex flex-col space-y-6" style={{ height: 'calc(100vh - 4rem)' }}>
-                <AIAssistant onAnalysisComplete={handleAiAnalysis} isLoading={isAiLoading} error={aiError} />
-                <div className="bg-gray-800 p-4 rounded-lg shadow-md h-full flex flex-col flex-grow">
+                <AIAssistant onProcessAll={handleProcessAll} isLoading={isAiLoading} error={aiError} />
+                <div className="bg-gray-800 p-4 rounded-lg shadow-md flex-grow flex flex-col">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
                     <div className="relative flex-grow">
                         <textarea
