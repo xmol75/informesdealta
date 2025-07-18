@@ -86,58 +86,57 @@
         };
 
         return (
-            <ReportSection title="Asistente IA por Documentos">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">1. Pegar Nota de Ingreso</label>
+            <div className="bg-gray-800 p-4 rounded-lg shadow-md h-full flex flex-col">
+                <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4 flex-shrink-0">Asistente IA por Documentos</h3>
+                <div className="space-y-2 flex-grow overflow-y-auto pr-2 flex flex-col">
+                    <div className="flex-1 flex flex-col">
+                        <label className="block text-sm font-medium text-gray-300 mb-1 flex-shrink-0">1. Pegar Nota de Ingreso</label>
                         <textarea
                             value={ingresoText}
                             onChange={(e) => setIngresoText(e.target.value)}
                             placeholder="Extrae antecedentes, problemas de salud y enfermedad actual..."
-                            rows={4}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">2. Pegar Hoja Quirúrgica (si aplica)</label>
+                    <div className="flex-1 flex flex-col">
+                        <label className="block text-sm font-medium text-gray-300 mb-1 flex-shrink-0">2. Pegar Hoja Quirúrgica (si aplica)</label>
                         <textarea
                             value={quirurgicaText}
                             onChange={(e) => setQuirurgicaText(e.target.value)}
                             placeholder="Extrae la intervención principal, procedimientos y GRD..."
-                            rows={4}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                         />
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">3. Pegar Evolutivos</label>
+                    <div className="flex-1 flex flex-col">
+                        <label className="block text-sm font-medium text-gray-300 mb-1 flex-shrink-0">3. Pegar Evolutivos</label>
                         <textarea
                             value={evolutivosText}
                             onChange={(e) => setEvolutivosText(e.target.value)}
                             placeholder="Genera el resumen evolutivo, pruebas y procedimientos menores..."
-                            rows={4}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                         />
                     </div>
-                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">4. Pegar Anatomía Patológica (si aplica)</label>
+                     <div className="flex-1 flex flex-col">
+                        <label className="block text-sm font-medium text-gray-300 mb-1 flex-shrink-0">4. Pegar Anatomía Patológica (si aplica)</label>
                         <textarea
                             value={patologicaText}
                             onChange={(e) => setPatologicaText(e.target.value)}
                             placeholder="Extrae el resultado de anatomía patológica..."
-                            rows={4}
-                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                         />
                     </div>
                 </div>
-                <button
-                    onClick={handleProcess}
-                    disabled={isLoading}
-                    className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
-                >
-                    {isLoading ? 'Procesando con IA...' : 'Procesar Todo y Rellenar Informe'}
-                </button>
-                {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
-            </ReportSection>
+                <div className="pt-4 flex-shrink-0">
+                    <button
+                        onClick={handleProcess}
+                        disabled={isLoading}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? 'Procesando con IA...' : 'Procesar Todo y Rellenar Informe'}
+                    </button>
+                    {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
+                </div>
+            </div>
         );
     };
 
@@ -446,9 +445,9 @@ ${patologicaText || "No proporcionado"}
               </div>
 
               {/* --- COLUMNA DERECHA (IA Y VISTA PREVIA) --- */}
-              <div className="flex flex-col">
+              <div className="grid grid-rows-2 gap-6">
                 <AIAssistant onProcessAll={handleProcessAll} isLoading={isAiLoading} error={aiError} />
-                <div className="bg-gray-800 p-4 rounded-lg shadow-md flex-grow flex flex-col mt-6">
+                <div className="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
                     <div className="relative flex-grow">
                         <textarea
