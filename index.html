@@ -127,14 +127,15 @@
         };
 
         return (
-            <ReportSection title="Asistente IA">
+            <div className="bg-gray-800 p-4 rounded-lg mb-6 shadow-md">
+                <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Asistente IA</h3>
                 <div className="p-2 bg-gray-700 rounded-md">
                     <p className="text-sm text-gray-300 mb-2">Pega aquí el informe de ingreso, hoja quirúrgica o notas de evolución para rellenar los campos automáticamente.</p>
                     <textarea
                         value={aiInputText}
                         onChange={(e) => setAiInputText(e.target.value)}
                         placeholder="Ejemplo de texto: Paciente varón de 65 años con antecedentes de HTA y diabetes tipo 2. Ingresa por colecistitis aguda. Se realiza colecistectomía laparoscópica sin incidencias. Evolución favorable."
-                        rows={10}
+                        rows={8}
                         className="w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
                     <button
@@ -146,7 +147,7 @@
                     </button>
                     {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
                 </div>
-            </ReportSection>
+            </div>
         );
     };
 
@@ -209,7 +210,17 @@
         setIsAiLoading(true);
         setAiError('');
         
-        const prompt = `Eres un asistente médico experto en analizar informes clínicos para generar resúmenes de alta. Analiza el siguiente texto clínico. Extrae la información solicitada y devuélvela estrictamente en formato JSON, siguiendo el esquema proporcionado. Si un campo no se encuentra en el texto, devuelve un string vacío para ese campo. El texto a analizar es:\n\n---INICIO TEXTO---\n${clinicalText}\n---FIN TEXTO---`;
+        const prompt = `Eres un asistente médico experto en codificación clínica y en analizar informes para generar resúmenes de alta. Analiza el siguiente texto clínico. Tu tarea es:
+1. Extraer los diagnósticos principales y secundarios. Para cada uno, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea (ej: "- Colecistitis aguda (CIE-9: 575.0)").
+2. Extraer los procedimientos quirúrgicos y terapéuticos. Para cada uno, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea.
+3. Extraer el GRD (Grupo Relacionado por el Diagnóstico) si se menciona.
+4. Extraer el resto de la información solicitada en el esquema.
+Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra en el texto, devuelve un string vacío para ese campo.
+
+Texto a analizar:
+---INICIO TEXTO---
+${clinicalText}
+---FIN TEXTO---`;
 
         const payload = {
             contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -221,6 +232,7 @@
                         diagnosticos: { type: "STRING" },
                         problemasSalud: { type: "STRING" },
                         procedimientos: { type: "STRING" },
+                        grd: { type: "STRING" },
                         antecedentesPatologicos: { type: "STRING" },
                         intervencionesPrevias: { type: "STRING" },
                         tratamientoHabitual: { type: "STRING" },
@@ -367,9 +379,9 @@
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
+              {/* --- COLUMNA IZQUIERDA (FORMULARIO) --- */}
               <div className="flex flex-col space-y-6">
                 <InitialQuestions data={formData} handleInputChange={handleInputChange} />
-                <AIAssistant onAnalysisComplete={handleAiAnalysis} isLoading={isAiLoading} error={aiError} />
                 <ReportSection title="2. Datos del Episodio">
                   <TextareaField {...commonFields.diagnosticos} value={formData.diagnosticos} onChange={handleInputChange} />
                   <TextareaField {...commonFields.problemasSalud} value={formData.problemasSalud} onChange={handleInputChange} />
@@ -428,8 +440,10 @@
                 </ReportSection>
               </div>
 
-              <div className="sticky top-8" style={{ height: 'calc(100vh - 4rem)' }}>
-                <div className="bg-gray-800 p-4 rounded-lg shadow-md h-full flex flex-col">
+              {/* --- COLUMNA DERECHA (IA Y VISTA PREVIA) --- */}
+              <div className="sticky top-8 flex flex-col space-y-6" style={{ height: 'calc(100vh - 4rem)' }}>
+                <AIAssistant onAnalysisComplete={handleAiAnalysis} isLoading={isAiLoading} error={aiError} />
+                <div className="bg-gray-800 p-4 rounded-lg shadow-md h-full flex flex-col flex-grow">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
                     <div className="relative flex-grow">
                         <textarea
