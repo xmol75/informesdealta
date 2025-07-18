@@ -208,14 +208,17 @@
         
         const prompt = `Eres un asistente médico experto en codificación clínica y en analizar informes para generar resúmenes de alta. Te proporcionaré hasta cuatro textos. Tu tarea es analizar todos los textos y rellenar un objeto JSON con la información extraída. Sigue estas reglas:
 
-1.  **Codificación CIE-9**: Para cada diagnóstico, problema de salud o procedimiento que encuentres en CUALQUIER texto, busca y añade su código CIE-9 correspondiente. Formatea el resultado como una lista separada por saltos de línea (ej: "- Colecistitis aguda (CIE-9: 575.0)").
-2.  **Acumulación de Datos**: Combina los diagnósticos y procedimientos de todos los textos. No sobrescribas, acumula la información.
-3.  **Extracción por Documento**:
+1.  **Codificación CIE-9**: Para cada diagnóstico, problema de salud o procedimiento que encuentres en CUALQUIER texto, busca y añade su código CIE-9 correspondiente.
+2.  **Problemas de Salud**: Este campo es para diagnósticos crónicos del CIE-9 que el paciente tenía ANTES del episodio actual y que no se han resuelto (ej: HTA, tabaquismo, sobrepeso).
+3.  **Resumen Evolutivo**: Debe ser un resumen SINTÉTICO y en prosa del curso de la hospitalización.
+4.  **Cálculo de GRD**: Basándote en el diagnóstico principal y el procedimiento quirúrgico, CALCULA el GRD (Grupo Relacionado por el Diagnóstico) más probable y su código.
+5.  **Extracción por Documento**:
     * **De la NOTA DE INGRESO**: Extrae 'problemasSalud', 'antecedentesPatologicos', 'intervencionesPrevias', 'tratamientoHabitual', 'enfermedadActual', 'exploracionFisica', 'analiticaIngreso', y 'pruebasImagenIngreso'.
-    * **De la HOJA QUIRÚRGICA**: Extrae 'procedimientos' (solo el procedimiento quirúrgico principal), 'grd', e 'intervencion' (descripción detallada de la cirugía).
-    * **De los EVOLUTIVOS**: Extrae un resumen para 'evolucionResumen', y listas para 'evolucionAnalitica', 'evolucionPruebasImagen' y 'evolucionProcedimientos' (procedimientos menores, no la cirugía principal). También extrae cualquier nuevo diagnóstico.
+    * **De la HOJA QUIRÚRGICA**: Extrae 'procedimientos' (solo el procedimiento quirúrgico principal) e 'intervencion' (descripción detallada de la cirugía).
+    * **De los EVOLUTIVOS**: Extrae el 'evolucionResumen', y listas para 'evolucionAnalitica', 'evolucionPruebasImagen' y 'evolucionProcedimientos' (procedimientos menores, no la cirugía principal). También extrae cualquier nuevo diagnóstico del episodio.
     * **De la ANATOMÍA PATOLÓGICA**: Extrae únicamente el resultado para 'anatomiaPatologica'.
-4.  **Formato JSON**: Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra, devuelve un string vacío.
+6.  **Acumulación de Datos**: Combina los diagnósticos y procedimientos de todos los textos.
+7.  **Formato JSON**: Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra, devuelve un string vacío.
 
 ---
 **TEXTO 1: NOTA DE INGRESO**
@@ -445,7 +448,7 @@ ${patologicaText || "No proporcionado"}
               </div>
 
               {/* --- COLUMNA DERECHA (IA Y VISTA PREVIA) --- */}
-              <div className="grid grid-rows-2 gap-6">
+              <div className="grid grid-rows-2 gap-6" style={{ gridTemplateRows: '1fr 1fr' }}>
                 <AIAssistant onProcessAll={handleProcessAll} isLoading={isAiLoading} error={aiError} />
                 <div className="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
