@@ -319,38 +319,30 @@ ${patologicaText || "No proporcionado"}
 
       const copyToClipboard = () => {
         if (reportPreviewRef.current) {
-            // Crear un contenedor temporal para el contenido que se va a copiar
-            const copyContainer = document.createElement('div');
+            const htmlContent = reportPreviewRef.current.innerHTML;
             
-            // Clonar el contenido visible del informe
-            const reportContent = reportPreviewRef.current.cloneNode(true);
+            // Envolvemos el contenido en un div con estilo de texto negro para el portapapeles
+            const styledHtmlContent = `<div style="color: black; font-family: monospace; text-align: justify;">${htmlContent}</div>`;
+
+            // Usamos el API del portapapeles para copiar texto enriquecido
+            function listener(e) {
+                e.clipboardData.setData("text/html", styledHtmlContent);
+                e.clipboardData.setData("text/plain", reportPreviewRef.current.innerText);
+                e.preventDefault();
+            }
             
-            // Aplicar estilo de texto negro al contenedor
-            copyContainer.style.color = 'black';
-            copyContainer.appendChild(reportContent);
-
-            // Añadir el contenedor al cuerpo del documento (no será visible)
-            document.body.appendChild(copyContainer);
-
-            // Seleccionar el contenido del contenedor temporal
-            const range = document.createRange();
-            range.selectNode(copyContainer);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
+            document.addEventListener("copy", listener);
             
             try {
-                // Ejecutar el comando de copiado
-                document.execCommand('copy');
+                document.execCommand("copy");
                 setCopySuccess('¡Copiado!');
             } catch (err) {
                 console.error('Error al copiar el texto: ', err);
                 setCopySuccess('Error');
+            } finally {
+                document.removeEventListener("copy", listener);
+                setTimeout(() => setCopySuccess(''), 2000);
             }
-
-            // Limpiar: eliminar el contenedor temporal y la selección
-            window.getSelection().removeAllRanges();
-            document.body.removeChild(copyContainer);
-            setTimeout(() => setCopySuccess(''), 2000);
         }
       };
       
