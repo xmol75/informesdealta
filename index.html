@@ -65,21 +65,12 @@
 
     const InitialQuestions = ({ data, handleInputChange }) => (
       <ReportSection title="1. Preguntas Iniciales">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+        <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Ingreso</label>
             <select name="tipoIngreso" value={data.tipoIngreso} onChange={handleInputChange} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
               <option value="programado">Programado</option>
               <option value="urgente">Urgente</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">¿Paciente intervenido?</label>
-            <select name="intervenido" value={data.intervenido} onChange={handleInputChange} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option value="si">Sí</option>
-              <option value="no">No</option>
-            </select>
-          </div>
         </div>
       </ReportSection>
     );
@@ -155,7 +146,6 @@
       const [formData, setFormData] = useState({
         // Datos generales
         tipoIngreso: 'programado',
-        intervenido: 'si',
         fechaIngreso: '',
         fechaAlta: '',
         fechaUrgencias: '',
@@ -313,7 +303,7 @@ ${patologicaText || "No proporcionado"}
       };
 
       useEffect(() => {
-        const { tipoIngreso, intervenido, ...data } = formData;
+        const { tipoIngreso, ...data } = formData;
         
         const formatDate = (dateString) => {
             if (!dateString) return '[FECHA NO ESPECIFICADA]';
@@ -338,7 +328,7 @@ ${patologicaText || "No proporcionado"}
         report += `ANTECEDENTES PERSONALES:\n- Alergias: ${data.alergias}\n- Hábitos tóxicos: ${data.habitosToxicos || 'No refiere'}\n- Antecedentes patológicos: ${data.antecedentesPatologicos || 'No refiere'}\n- Intervenciones quirúrgicas: ${data.intervencionesPrevias || 'No refiere'}\n- Ingresos Hospitalarios: ${data.ingresosPrevios || 'No refiere'}\n- Sigue tratamiento (según receta electrónica): ${data.tratamientoHabitual || 'No refiere'}\n\n`;
         
         let enfermedadActualCompleta = data.enfermedadActual || '[No especificado]';
-        if (tipoIngreso === 'programado' && intervenido === 'si') {
+        if (tipoIngreso === 'programado' && data.intervencion) {
             enfermedadActualCompleta += '\nTras ser informado/a del proceso y firmar el consentimiento informado, es remitido/a al Servicio de Anestesia para valoración prequirúrgica, informando que no existe contraindicación para la intervención quirúrgica.';
         }
         report += `ENFERMEDAD ACTUAL:\n${enfermedadActualCompleta}\n\n`;
@@ -346,7 +336,7 @@ ${patologicaText || "No proporcionado"}
         if (data.analiticaIngreso) report += `Pruebas de laboratorio al ingreso:\n${data.analiticaIngreso}\n\n`;
         if (data.pruebasImagenIngreso) report += `Pruebas de imagen al ingreso:\n${data.pruebasImagenIngreso}\n\n`;
 
-        if (intervenido === 'si' && data.intervencion) {
+        if (data.intervencion) {
           report += `INTERVENCIÓN QUIRÚRGICA:\n${data.intervencion}\n\n`;
           if (data.anatomiaPatologica) report += `ANATOMÍA PATOLÓGICA:\n${data.anatomiaPatologica}\n\n`;
         }
@@ -354,7 +344,7 @@ ${patologicaText || "No proporcionado"}
         let evolucionCompleta = '';
         if (tipoIngreso === 'urgente') {
             evolucionCompleta += `Tras una estancia en el Área de Observación de Urgencias se procede a ingreso en planta de Hospitalización del Servicio de Cirugía en la Unidad [UNIDAD], bajo la orientación diagnóstica de [DIAGNÓSTICO]. Se inicia tratamiento conservador consistente en [TRATAMIENTO].\n`;
-        } else if (tipoIngreso === 'programado' && intervenido === 'si') {
+        } else if (tipoIngreso === 'programado' && data.intervencion) {
             evolucionCompleta += `El postoperatorio transcurre en la Unidad de [poner unidad].\n`;
         }
         evolucionCompleta += data.evolucionResumen || '';
@@ -369,7 +359,7 @@ ${patologicaText || "No proporcionado"}
         report += `- Dieta sin grasas y tratamientos habituales (si hubiera).\n`;
         report += `- Analgesia: ibuprofeno 600mg/8h vo + paracetamol 1g/8h vo alterno si dolor.\n`;
         report += `- Omeprazol 20mg/24h vo 20 minutos antes del desayuno.\n`;
-        if (intervenido === 'si') {
+        if (data.intervencion) {
           report += `- Higiene diaria de las heridas quirúrgicas.\n`;
           report += `- Acudir a su Centro de Salud a los 9 días de la intervención para retirada de grapas previa cita telefónica.\n`;
         }
@@ -437,12 +427,12 @@ ${patologicaText || "No proporcionado"}
                     <TextareaField id="analiticaIngreso" label="Pruebas de Laboratorio al Ingreso" value={formData.analiticaIngreso} onChange={handleInputChange} />
                     <TextareaField id="pruebasImagenIngreso" label="Pruebas de Imagen al Ingreso" value={formData.pruebasImagenIngreso} onChange={handleInputChange} />
                 </ReportSection>
-                {formData.intervenido === 'si' && (
-                    <ReportSection title="6. Intervención Quirúrgica">
-                        <TextareaField id="intervencion" label="Descripción de la Intervención" value={formData.intervencion} onChange={handleInputChange} />
-                        <TextareaField id="anatomiaPatologica" label="Anatomía Patológica" value={formData.anatomiaPatologica} onChange={handleInputChange} />
-                    </ReportSection>
-                )}
+                
+                <ReportSection title="6. Intervención Quirúrgica">
+                    <TextareaField id="intervencion" label="Descripción de la Intervención" value={formData.intervencion} onChange={handleInputChange} />
+                    <TextareaField id="anatomiaPatologica" label="Anatomía Patológica" value={formData.anatomiaPatologica} onChange={handleInputChange} />
+                </ReportSection>
+                
                 <ReportSection title="7. Evolución y Cierre">
                     <TextareaField id="evolucionResumen" label="Resumen Evolutivo" value={formData.evolucionResumen} onChange={handleInputChange} rows={5}/>
                     <TextareaField id="evolucionAnalitica" label="Pruebas Analíticas (Evolución)" value={formData.evolucionAnalitica} onChange={handleInputChange} />
