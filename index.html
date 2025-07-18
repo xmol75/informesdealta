@@ -103,7 +103,7 @@
                         <textarea
                             value={quirurgicaText}
                             onChange={(e) => setQuirurgicaText(e.target.value)}
-                            placeholder="Extrae la intervención principal, procedimientos y GRD..."
+                            placeholder="Extrae la intervención principal y procedimientos..."
                             className="w-full flex-grow bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                         />
                     </div>
@@ -155,7 +155,6 @@
         diagnosticos: '',
         problemasSalud: '',
         procedimientos: '',
-        grd: '',
         // Antecedentes
         alergias: 'Sin alergias medicamentosas conocidas.',
         habitosToxicos: '',
@@ -211,14 +210,13 @@
 1.  **Codificación y Formato de Listas**: Para 'diagnosticos', 'problemasSalud' y 'procedimientos', formatea cada entrada como un punto en una lista (usando un guion "-"). Cada punto DEBE incluir el código CIE-9 correspondiente. Ejemplo: "- Hipertensión arterial (CIE-9: 401.9)".
 2.  **Problemas de Salud**: Este campo es para diagnósticos crónicos del CIE-9 que el paciente tenía ANTES del episodio actual y que no se han resuelto (ej: HTA, tabaquismo, sobrepeso).
 3.  **Resumen Evolutivo**: Debe ser un resumen SINTÉTICO y en prosa del curso de la hospitalización.
-4.  **Cálculo de GRD**: Basándote en el diagnóstico principal y el procedimiento quirúrgico, CALCULA el GRD (Grupo Relacionado por el Diagnóstico) más probable y su código. Formátéalo como "- GRD XXX: [Descripción]".
-5.  **Extracción por Documento**:
+4.  **Extracción por Documento**:
     * **De la NOTA DE INGRESO**: Extrae 'problemasSalud', 'antecedentesPatologicos', 'intervencionesPrevias', 'tratamientoHabitual', 'enfermedadActual', 'exploracionFisica', 'analiticaIngreso', y 'pruebasImagenIngreso'.
     * **De la HOJA QUIRÚRGICA**: Extrae 'procedimientos' (solo el procedimiento quirúrgico principal) e 'intervencion' (descripción detallada de la cirugía).
     * **De los EVOLUTIVOS**: Extrae el 'evolucionResumen', y listas para 'evolucionAnalitica', 'evolucionPruebasImagen' y 'evolucionProcedimientos' (procedimientos menores, no la cirugía principal). También extrae cualquier nuevo diagnóstico del episodio.
     * **De la ANATOMÍA PATOLÓGICA**: Extrae únicamente el resultado para 'anatomiaPatologica'.
-6.  **Acumulación de Datos**: Combina los diagnósticos y procedimientos de todos los textos.
-7.  **Formato JSON**: Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra, devuelve un string vacío.
+5.  **Acumulación de Datos**: Combina los diagnósticos y procedimientos de todos los textos.
+6.  **Formato JSON**: Devuelve todo estrictamente en formato JSON. Si un campo no se encuentra, devuelve un string vacío.
 
 ---
 **TEXTO 1: NOTA DE INGRESO**
@@ -244,7 +242,6 @@ ${patologicaText || "No proporcionado"}
                         diagnosticos: { type: "STRING" },
                         problemasSalud: { type: "STRING" },
                         procedimientos: { type: "STRING" },
-                        grd: { type: "STRING" },
                         antecedentesPatologicos: { type: "STRING" },
                         intervencionesPrevias: { type: "STRING" },
                         tratamientoHabitual: { type: "STRING" },
@@ -317,7 +314,8 @@ ${patologicaText || "No proporcionado"}
         report += `DIAGNÓSTICOS DEL EPISODIO:\n${data.diagnosticos || '[No especificado]'}\n\n`;
         report += `PROBLEMAS DE SALUD:\n${data.problemasSalud || '[No especificado]'}\n\n`;
         report += `PROCEDIMIENTOS EN EL EPISODIO:\n${data.procedimientos || '[No especificado]'}\n\n`;
-        report += `GRD: ${data.grd || '[No especificado]'}\n\n------------------------------------------------------------\n\n`;
+        
+        report += `------------------------------------------------------------\n\n`;
         
         report += `Fecha de Ingreso: ${formatDate(data.fechaIngreso)}\nFecha de Alta: ${formatDate(data.fechaAlta)}\nDuración de la estancia: ${calculateDuration()}\n\n`;
 
@@ -398,7 +396,6 @@ ${patologicaText || "No proporcionado"}
                   <TextareaField id="diagnosticos" label="Diagnósticos del Episodio" value={formData.diagnosticos} onChange={handleInputChange} />
                   <TextareaField id="problemasSalud" label="Problemas de Salud" value={formData.problemasSalud} onChange={handleInputChange} />
                   <TextareaField id="procedimientos" label="Procedimientos en el Episodio" value={formData.procedimientos} onChange={handleInputChange} />
-                  <InputField id="grd" label="GRD" value={formData.grd} onChange={handleInputChange} />
                 </ReportSection>
                 <ReportSection title="3. Fechas y Motivo">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
