@@ -30,6 +30,11 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280;
         }
+        .report-preview {
+            white-space: pre-wrap;
+            text-align: justify;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body class="bg-gray-900">
@@ -39,7 +44,7 @@
     <!-- 4. Nuestro código de React -->
     <script type="text/babel">
     
-    const { useState, useEffect, useCallback } = React;
+    const { useState, useEffect, useCallback, useRef } = React;
 
     // --- COMPONENTES DE LA UI ---
     const InputField = ({ id, label, value, onChange, type = 'text' }) => (
@@ -139,6 +144,17 @@
             </div>
         );
     };
+    
+    // Componente para renderizar texto con saltos de línea
+    const FormattedText = ({ text, defaultText = '[No especificado]' }) => {
+        const content = text || defaultText;
+        return content.split('\n').map((line, index) => (
+            <React.Fragment key={index}>
+                {line}
+                <br />
+            </React.Fragment>
+        ));
+    };
 
     // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
     function App() {
@@ -180,10 +196,10 @@
         citaRevision: 'Citado por Secretaría de Cirugía.',
       });
 
-      const [generatedReport, setGeneratedReport] = useState('');
       const [copySuccess, setCopySuccess] = useState('');
       const [isAiLoading, setIsAiLoading] = useState(false);
       const [aiError, setAiError] = useState('');
+      const reportPreviewRef = useRef(null);
 
       const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -301,81 +317,30 @@ ${patologicaText || "No proporcionado"}
         }
       };
 
-      useEffect(() => {
-        const { tipoIngreso, ...data } = formData;
-        
-        const formatDate = (dateString) => {
-            if (!dateString) return '[FECHA NO ESPECIFICADA]';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
-        };
-
-        let report = `ALTA DEL SERVICIO DE CIRUGÍA GENERAL Y DEL APARATO DIGESTIVO\nUnidad de Cirugía Hepatobiliar y Trasplante Hepático\n\n------------------------------------------------------------\n\n`;
-        report += `DIAGNÓSTICOS DEL EPISODIO:\n${data.diagnosticos || '[No especificado]'}\n\n`;
-        report += `PROBLEMAS DE SALUD:\n${data.problemasSalud || '[No especificado]'}\n\n`;
-        report += `PROCEDIMIENTOS EN EL EPISODIO:\n${data.procedimientos || '[No especificado]'}\n\n`;
-        
-        report += `------------------------------------------------------------\n\n`;
-        
-        report += `Fecha de Ingreso: ${formatDate(data.fechaIngreso)}\nFecha de Alta: ${formatDate(data.fechaAlta)}\nDuración de la estancia: ${calculateDuration()}\n\n`;
-
-        if (tipoIngreso === 'programado') {
-          report += `MOTIVO DE INGRESO: Paciente de ${data.edad || '[edad]'} años que ingresa de manera programada para intervenirse quirúrgicamente de ${data.motivoProgramado || '[intervención]'}.\n\n`;
-        } else {
-          report += `MOTIVO DE CONSULTA EN URGENCIAS: Paciente de ${data.edad || '[edad]'} años que acude a urgencias el día ${formatDate(data.fechaUrgencias)} por ${data.motivoUrgente || '[motivo]'}.\n\n`;
-        }
-        
-        report += `ANTECEDENTES PERSONALES:\n- Alergias: ${data.alergias}\n- Hábitos tóxicos: ${data.habitosToxicos || 'No refiere'}\n- Antecedentes patológicos: ${data.antecedentesPatologicos || 'No refiere'}\n- Intervenciones quirúrgicas: ${data.intervencionesPrevias || 'No refiere'}\n- Ingresos Hospitalarios: ${data.ingresosPrevios || 'No refiere'}\n- Sigue tratamiento (según receta electrónica): ${data.tratamientoHabitual || 'No refiere'}\n\n`;
-        
-        let enfermedadActualCompleta = data.enfermedadActual || '[No especificado]';
-        if (tipoIngreso === 'programado' && data.intervencion) {
-            enfermedadActualCompleta += '\nTras ser informado/a del proceso y firmar el consentimiento informado, es remitido/a al Servicio de Anestesia para valoración prequirúrgica, informando que no existe contraindicación para la intervención quirúrgica.';
-        }
-        report += `ENFERMEDAD ACTUAL:\n${enfermedadActualCompleta}\n\n`;
-        if (data.exploracionFisica) report += `Exploración física y signos vitales:\n${data.exploracionFisica}\n\n`;
-        if (data.analiticaIngreso) report += `Pruebas de laboratorio al ingreso:\n${data.analiticaIngreso}\n\n`;
-        if (data.pruebasImagenIngreso) report += `Pruebas de imagen al ingreso:\n${data.pruebasImagenIngreso}\n\n`;
-
-        if (data.intervencion) {
-          report += `INTERVENCIÓN QUIRÚRGICA:\n${data.intervencion}\n\n`;
-          if (data.anatomiaPatologica) report += `ANATOMÍA PATOLÓGICA:\n${data.anatomiaPatologica}\n\n`;
-        }
-        
-        let evolucionCompleta = '';
-        if (tipoIngreso === 'urgente') {
-            evolucionCompleta += `Tras una estancia en el Área de Observación de Urgencias se procede a ingreso en planta de Hospitalización del Servicio de Cirugía en la Unidad [UNIDAD], bajo la orientación diagnóstica de [DIAGNÓSTICO]. Se inicia tratamiento conservador consistente en [TRATAMIENTO].\n`;
-        } else if (tipoIngreso === 'programado' && data.intervencion) {
-            evolucionCompleta += `El postoperatorio transcurre en la Unidad de [poner unidad].\n`;
-        }
-        evolucionCompleta += data.evolucionResumen || '';
-        report += `EVOLUCIÓN:\n${evolucionCompleta}\n\n`;
-        if (data.evolucionAnalitica) report += `Pruebas analíticas durante la evolución:\n${data.evolucionAnalitica}\n\n`;
-        if (data.evolucionPruebasImagen) report += `Pruebas radiológicas durante la evolución:\n${data.evolucionPruebasImagen}\n\n`;
-        if (data.evolucionProcedimientos) report += `Procedimientos durante la evolución:\n${data.evolucionProcedimientos}\n\n`;
-        
-        report += `${data.fraseFinal}\n\n`;
-
-        report += `RECOMENDACIONES AL ALTA:\n`;
-        report += `- Dieta sin grasas y tratamientos habituales (si hubiera).\n`;
-        report += `- Analgesia: ibuprofeno 600mg/8h vo + paracetamol 1g/8h vo alterno si dolor.\n`;
-        report += `- Omeprazol 20mg/24h vo 20 minutos antes del desayuno.\n`;
-        if (data.intervencion) {
-          report += `- Higiene diaria de las heridas quirúrgicas.\n`;
-          report += `- Acudir a su Centro de Salud a los 9 días de la intervención para retirada de grapas previa cita telefónica.\n`;
-        }
-        report += `- Reposo domiciliario e ir reincorporándose gradualmente en la actividad cotidiana.\n`;
-        report += `- Si empeora acudir a UCIAs de Cirugía del Hospital Universitario Son Espases.\n`;
-        report += `- Acudirá a revisión en Consultas Externas de Cirugía (Unidad HByTH) el día y la hora citados por Secretaría de Cirugía: ${data.citaRevision}\n`;
-
-        setGeneratedReport(report);
-      }, [formData]);
-
       const copyToClipboard = () => {
-        const reportTextArea = document.getElementById('generated-report-textarea');
-        reportTextArea.select();
-        document.execCommand('copy');
-        setCopySuccess('¡Copiado!');
-        setTimeout(() => setCopySuccess(''), 2000);
+        if (reportPreviewRef.current) {
+            const range = document.createRange();
+            range.selectNode(reportPreviewRef.current);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {
+                document.execCommand('copy');
+                setCopySuccess('¡Copiado!');
+            } catch (err) {
+                console.error('Error al copiar el texto: ', err);
+                setCopySuccess('Error');
+            }
+
+            window.getSelection().removeAllRanges();
+            setTimeout(() => setCopySuccess(''), 2000);
+        }
+      };
+      
+      const formatDate = (dateString) => {
+        if (!dateString) return '[FECHA NO ESPECIFICADA]';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' });
       };
 
       return (
@@ -450,12 +415,72 @@ ${patologicaText || "No proporcionado"}
                 <div className="bg-gray-800 p-4 rounded-lg shadow-md flex flex-col">
                     <h3 className="text-lg font-semibold text-teal-400 border-b border-gray-600 pb-2 mb-4">Informe Generado (Vista Previa)</h3>
                     <div className="relative flex-grow">
-                        <textarea
-                            id="generated-report-textarea"
-                            readOnly
-                            value={generatedReport}
-                            className="w-full h-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white font-mono text-sm whitespace-pre-wrap resize-none"
-                        />
+                        <div
+                            ref={reportPreviewRef}
+                            id="generated-report-preview"
+                            className="w-full h-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white report-preview overflow-y-auto"
+                        >
+                            <strong>ALTA DEL SERVICIO DE CIRUGÍA GENERAL Y DEL APARATO DIGESTIVO</strong><br />Unidad de Cirugía Hepatobiliar y Trasplante Hepático<br /><br />
+                            ------------------------------------------------------------<br /><br />
+                            <strong>DIAGNÓSTICOS DEL EPISODIO:</strong><br />
+                            <FormattedText text={formData.diagnosticos} /><br />
+                            <strong>PROBLEMAS DE SALUD:</strong><br />
+                            <FormattedText text={formData.problemasSalud} /><br />
+                            <strong>PROCEDIMIENTOS EN EL EPISODIO:</strong><br />
+                            <FormattedText text={formData.procedimientos} /><br />
+                            ------------------------------------------------------------<br /><br />
+                            <strong>Fecha de Ingreso:</strong> {formatDate(formData.fechaIngreso)}<br />
+                            <strong>Fecha de Alta:</strong> {formatDate(formData.fechaAlta)}<br />
+                            <strong>Duración de la estancia:</strong> {calculateDuration()}<br /><br />
+                            {formData.tipoIngreso === 'programado' ? (
+                                <><strong>MOTIVO DE INGRESO:</strong> Paciente de {formData.edad || '[edad]'} años que ingresa de manera programada para intervenirse quirúrgicamente de {formData.motivoProgramado || '[intervención]'}.<br /><br /></>
+                            ) : (
+                                <><strong>MOTIVO DE CONSULTA EN URGENCIAS:</strong> Paciente de {formData.edad || '[edad]'} años que acude a urgencias el día {formatDate(formData.fechaUrgencias)} por {formData.motivoUrgente || '[motivo]'}.<br /><br /></>
+                            )}
+                            <strong>ANTECEDENTES PERSONALES:</strong><br />
+                            - Alergias: {formData.alergias}<br />
+                            - Hábitos tóxicos: {formData.habitosToxicos || 'No refiere'}<br />
+                            - Antecedentes patológicos: {formData.antecedentesPatologicos || 'No refiere'}<br />
+                            - Intervenciones quirúrgicas: {formData.intervencionesPrevias || 'No refiere'}<br />
+                            - Ingresos Hospitalarios: {formData.ingresosPrevios || 'No refiere'}<br />
+                            - Sigue tratamiento (según receta electrónica): {formData.tratamientoHabitual || 'No refiere'}<br /><br />
+                            <strong>ENFERMEDAD ACTUAL:</strong><br />
+                            <FormattedText text={formData.enfermedadActual} />
+                            {formData.tipoIngreso === 'programado' && formData.intervencion && (
+                                <><FormattedText text={"Tras ser informado/a del proceso y firmar el consentimiento informado, es remitido/a al Servicio de Anestesia para valoración prequirúrgica, informando que no existe contraindicación para la intervención quirúrgica."} /><br /></>
+                            )}
+                            <br />
+                            {formData.exploracionFisica && <><strong>Exploración física y signos vitales:</strong><br /><FormattedText text={formData.exploracionFisica} /><br /></>}
+                            {formData.analiticaIngreso && <><strong>Pruebas de laboratorio al ingreso:</strong><br /><FormattedText text={formData.analiticaIngreso} /><br /></>}
+                            {formData.pruebasImagenIngreso && <><strong>Pruebas de imagen al ingreso:</strong><br /><FormattedText text={formData.pruebasImagenIngreso} /><br /></>}
+                            {formData.intervencion && (
+                                <><strong>INTERVENCIÓN QUIRÚRGICA:</strong><br /><FormattedText text={formData.intervencion} /><br /></>
+                            )}
+                            {formData.intervencion && formData.anatomiaPatologica && (
+                                <><strong>ANATOMÍA PATOLÓGICA:</strong><br /><FormattedText text={formData.anatomiaPatologica} /><br /></>
+                            )}
+                            <strong>EVOLUCIÓN:</strong><br />
+                            {formData.tipoIngreso === 'urgente' && <FormattedText text={"Tras una estancia en el Área de Observación de Urgencias se procede a ingreso en planta de Hospitalización del Servicio de Cirugía en la Unidad [UNIDAD], bajo la orientación diagnóstica de [DIAGNÓSTICO]. Se inicia tratamiento conservador consistente en [TRATAMIENTO]."} />}
+                            {formData.tipoIngreso === 'programado' && formData.intervencion && <FormattedText text={"El postoperatorio transcurre en la Unidad de [poner unidad]."} />}
+                            <FormattedText text={formData.evolucionResumen} defaultText={""} />
+                            <br />
+                            {formData.evolucionAnalitica && <><strong>Pruebas analíticas durante la evolución:</strong><br /><FormattedText text={formData.evolucionAnalitica} /><br /></>}
+                            {formData.evolucionPruebasImagen && <><strong>Pruebas radiológicas durante la evolución:</strong><br /><FormattedText text={formData.evolucionPruebasImagen} /><br /></>}
+                            {formData.evolucionProcedimientos && <><strong>Procedimientos durante la evolución:</strong><br /><FormattedText text={formData.evolucionProcedimientos} /><br /></>}
+                            <FormattedText text={formData.fraseFinal} />
+                            <br />
+                            <strong>RECOMENDACIONES AL ALTA:</strong><br />
+                            - Dieta sin grasas y tratamientos habituales (si hubiera).<br />
+                            - Analgesia: ibuprofeno 600mg/8h vo + paracetamol 1g/8h vo alterno si dolor.<br />
+                            - Omeprazol 20mg/24h vo 20 minutos antes del desayuno.<br />
+                            {formData.intervencion && (
+                                <>- Higiene diaria de las heridas quirúrgicas.<br />
+                                - Acudir a su Centro de Salud a los 9 días de la intervención para retirada de grapas previa cita telefónica.<br /></>
+                            )}
+                            - Reposo domiciliario e ir reincorporándose gradualmente en la actividad cotidiana.<br />
+                            - Si empeora acudir a UCIAs de Cirugía del Hospital Universitario Son Espases.<br />
+                            - Acudirá a revisión en Consultas Externas de Cirugía (Unidad HByTH) el día y la hora citados por Secretaría de Cirugía: {formData.citaRevision}<br />
+                        </div>
                         <button 
                             onClick={copyToClipboard}
                             className="absolute top-1 right-3 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
